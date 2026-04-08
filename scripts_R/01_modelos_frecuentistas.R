@@ -50,8 +50,8 @@ if ("respuesta_count" %in% names(datos)) {
   print(summary(modelo_pois))
 
   # Chequeo simple de sobredispersión
-  sobredisp <- sum(residuals(modelo_pois, type = "pearson")^2) / modelo_pois$df.residual
-  cat("Sobredispersión (Poisson):", round(sobredisp, 3), "\n")
+  sobredispersion <- sum(residuals(modelo_pois, type = "pearson")^2) / modelo_pois$df.residual
+  cat("Sobredispersión (Poisson):", round(sobredispersion, 3), "\n")
 }
 
 # ------------------------------------------------------------------

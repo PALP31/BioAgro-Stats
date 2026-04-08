@@ -30,9 +30,9 @@ datos <- data.frame(
 )
 
 # Respuesta continua con efecto de tratamiento + covariable + ruido
-efecto_trat <- c(Control = 0, T1 = 2.5, T2 = 4)
+efecto_tratamiento <- c(Control = 0, T1 = 2.5, T2 = 4)
 datos$respuesta <- 20 +
-  efecto_trat[datos$tratamiento] +
+  efecto_tratamiento[datos$tratamiento] +
   0.2 * datos$covariable +
   rnorm(n, sd = 2.5)
 
@@ -62,6 +62,10 @@ modelo_lm <- lm(respuesta ~ tratamiento + covariable, data = datos)
 # 1) Normalidad de residuos (Shapiro-Wilk)
 shapiro_res <- shapiro.test(residuals(modelo_lm))
 print(shapiro_res)
+
+# Complemento visual de normalidad (recomendado para muestras moderadas/grandes)
+qqnorm(residuals(modelo_lm))
+qqline(residuals(modelo_lm), col = "red", lwd = 2)
 
 # 2) Homocedasticidad
 # 2a. Levene (por factor de tratamiento)
