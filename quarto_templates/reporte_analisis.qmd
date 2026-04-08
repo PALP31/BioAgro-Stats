@@ -1,0 +1,226 @@
+---
+title: "Reporte de Análisis Estadístico"
+subtitle: "Experimento: [Nombre del experimento]"
+author: "[Nombre del autor]"
+date: today
+date-format: "D MMMM YYYY"
+lang: es
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-summary: "Mostrar código"
+    embed-resources: true
+    fig-width: 8
+    fig-height: 5
+  pdf:
+    toc: true
+    number-sections: true
+    fig-width: 6.5
+    fig-height: 4
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig-align: "center"
+---
+
+```{r setup}
+#| include: false
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(
+  tidyverse, lme4, lmerTest, emmeans,
+  mgcv, car, performance, see,
+  knitr, kableExtra, ggplot2, patchwork
+)
+
+# Tema global para ggplot2
+theme_set(theme_bw(base_size = 12))
+```
+
+## Introducción
+
+Breve descripción del objetivo del experimento y las preguntas de investigación.
+
+- **Objetivo:** ...
+- **Hipótesis:** ...
+- **Variables respuesta:** ...
+- **Factores de tratamiento:** ...
+
+## Materiales y métodos
+
+### Diseño experimental
+
+Describa el diseño (DCA, DBCA, factorial, etc.), el número de tratamientos, réplicas y bloques.
+
+### Datos
+
+```{r cargar-datos}
+# Sustituir con la ruta real a los datos
+# datos <- read.csv("datos/experimento.csv")
+
+# Datos simulados de ejemplo
+set.seed(42)
+datos <- data.frame(
+  tratamiento = factor(rep(c("Control", "Dosis_baja", "Dosis_alta"), each = 20),
+                       levels = c("Control", "Dosis_baja", "Dosis_alta")),
+  bloque      = factor(rep(1:4, times = 15)),
+  rendimiento = c(rnorm(20, 5.0, 0.8), rnorm(20, 6.2, 0.9), rnorm(20, 7.5, 1.0)),
+  conteo      = rpois(60, lambda = rep(c(3, 6, 10), each = 20))
+)
+```
+
+### Estadística descriptiva
+
+```{r descriptiva}
+#| label: tbl-descriptiva
+#| tbl-cap: "Estadística descriptiva por tratamiento"
+desc <- datos |>
+  group_by(tratamiento) |>
+  summarise(
+    n     = n(),
+    Media = mean(rendimiento),
+    DE    = sd(rendimiento),
+    EE    = DE / sqrt(n),
+    Min   = min(rendimiento),
+    Max   = max(rendimiento)
+  )
+
+kable(desc, digits = 3, align = "lrrrrrr") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r fig-boxplot}
+#| label: fig-boxplot
+#| fig-cap: "Distribución del rendimiento por tratamiento"
+ggplot(datos, aes(x = tratamiento, y = rendimiento, fill = tratamiento)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 1.5) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "Tratamiento", y = "Rendimiento (unidades)") +
+  theme(legend.position = "none")
+```
+
+## Análisis estadístico
+
+### ANOVA
+
+```{r anova}
+modelo_anova <- aov(rendimiento ~ tratamiento, data = datos)
+summary(modelo_anova)
+```
+
+#### Supuestos del ANOVA
+
+```{r supuestos-anova}
+#| label: fig-supuestos
+#| fig-cap: "Diagnóstico de supuestos del ANOVA"
+#| fig-width: 10
+#| fig-height: 8
+par(mfrow = c(2, 2))
+plot(modelo_anova)
+par(mfrow = c(1, 1))
+```
+
+```{r levene}
+car::leveneTest(rendimiento ~ tratamiento, data = datos)
+```
+
+#### Comparaciones múltiples (Tukey)
+
+```{r tukey}
+#| label: tbl-tukey
+#| tbl-cap: "Comparaciones post-hoc (Tukey HSD)"
+comp <- emmeans(modelo_anova, pairwise ~ tratamiento, adjust = "tukey")
+kable(as.data.frame(comp$contrasts), digits = 4) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+### Modelo Lineal Mixto (LMM)
+
+```{r lmm}
+modelo_lmm <- lmer(rendimiento ~ tratamiento + (1 | bloque), data = datos)
+summary(modelo_lmm)
+anova(modelo_lmm)
+```
+
+```{r lmm-medias}
+#| label: fig-medias-lmm
+#| fig-cap: "Medias marginales estimadas ± IC 95% (LMM)"
+medias <- as.data.frame(emmeans(modelo_lmm, ~ tratamiento))
+
+ggplot(medias, aes(x = tratamiento, y = emmean,
+                   ymin = lower.CL, ymax = upper.CL,
+                   color = tratamiento)) +
+  geom_point(size = 3) +
+  geom_errorbar(width = 0.2, linewidth = 0.8) +
+  scale_color_brewer(palette = "Set1") +
+  labs(x = "Tratamiento", y = "Rendimiento estimado (± IC 95%)") +
+  theme(legend.position = "none")
+```
+
+### GLM – Poisson (conteos)
+
+```{r glm-poisson}
+modelo_glm <- glm(conteo ~ tratamiento, data = datos,
+                  family = poisson(link = "log"))
+summary(modelo_glm)
+car::Anova(modelo_glm, type = "II")
+performance::check_overdispersion(modelo_glm)
+```
+
+### GAM
+
+```{r gam}
+datos$temperatura <- runif(60, 15, 35)
+modelo_gam <- mgcv::gam(
+  rendimiento ~ tratamiento + s(temperatura, k = 5),
+  data   = datos,
+  method = "REML"
+)
+summary(modelo_gam)
+```
+
+```{r fig-gam}
+#| label: fig-gam
+#| fig-cap: "Efecto suavizado de temperatura (GAM)"
+plot(modelo_gam, pages = 1, shade = TRUE, residuals = TRUE,
+     seWithMean = TRUE, col = "steelblue")
+```
+
+## Resultados y discusión
+
+Resuma los hallazgos estadísticos en lenguaje claro:
+
+- El ANOVA mostró diferencias significativas entre tratamientos (*F* = ..., *p* = ...).
+- Las comparaciones de Tukey indicaron que ...
+- El modelo LMM confirmó ...
+
+## Conclusiones
+
+- **Conclusión 1:** ...
+- **Conclusión 2:** ...
+- **Conclusión 3:** ...
+
+## Referencias
+
+- R Core Team (2024). *R: A Language and Environment for Statistical Computing*. R Foundation for Statistical Computing. <https://www.R-project.org/>
+- Bates D, Mächler M, Bolker B, Walker S (2015). "Fitting Linear Mixed-Effects Models Using lme4." *Journal of Statistical Software*, 67(1), 1–48.
+- Wood SN (2017). *Generalized Additive Models: An Introduction with R* (2nd ed.). CRC Press.
+
+## Información de sesión
+
+```{r session-info}
+sessionInfo()
+```

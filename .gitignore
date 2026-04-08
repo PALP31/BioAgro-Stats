@@ -1,0 +1,97 @@
+# ============================================================
+# .gitignore para proyectos de R y Python
+# ============================================================
+
+# ---------------------------
+# R
+# ---------------------------
+# Historial y sesión de R
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Paquetes instalados localmente
+renv/library/
+renv/local/
+renv/lock/
+packrat/lib*/
+packrat/src/
+
+# Resultados de construcción de paquetes R
+*.o
+*.so
+*.dll
+src/*.o
+src/*.so
+
+# Archivos temporales de knitr / rmarkdown / quarto
+*_cache/
+*_files/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+
+# ---------------------------
+# Python
+# ---------------------------
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Distribución / empaquetado
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# Jupyter – ignorar sólo checkpoints automáticos, no los notebooks mismos
+.ipynb_checkpoints/
+
+# Pytest / cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# mypy / pyright
+.mypy_cache/
+.pyright/
+
+# ---------------------------
+# Quarto
+# ---------------------------
+/.quarto/
+*_files/
+*_cache/
+*.html          # generados por render
+*.pdf           # generados por render
+docs/
+
+# ---------------------------
+# Sistema operativo
+# ---------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------
+# Editores
+# ---------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

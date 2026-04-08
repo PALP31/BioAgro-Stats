@@ -1,0 +1,257 @@
+---
+title: "Reporte de Análisis Bayesiano"
+subtitle: "Experimento: [Nombre del experimento]"
+author: "[Nombre del autor]"
+date: today
+date-format: "D MMMM YYYY"
+lang: es
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+    number-sections: true
+    theme: flatly
+    code-fold: true
+    code-summary: "Mostrar código"
+    embed-resources: true
+    fig-width: 8
+    fig-height: 5
+  pdf:
+    toc: true
+    number-sections: true
+    fig-width: 6.5
+    fig-height: 4
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig-align: "center"
+---
+
+```{r setup}
+#| include: false
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(
+  tidyverse, brms, bayesplot, tidybayes,
+  ggdist, posterior, loo,
+  knitr, kableExtra, patchwork
+)
+
+theme_set(theme_bw(base_size = 12))
+options(brms.backend = "cmdstanr")   # usar "rstan" si no está instalado cmdstanr
+
+# Crear directorio de caché si no existe
+if (!dir.exists("cache")) dir.create("cache")
+```
+
+## Introducción
+
+Descripción del experimento y justificación del enfoque bayesiano:
+
+- **Objetivo:** ...
+- **Variables respuesta:** ...
+- **Factores:** ...
+- **Justificación bayesiana:** (conocimiento previo, propagación de incertidumbre, etc.)
+
+## Datos
+
+```{r datos}
+# Sustituir con: datos <- read.csv("datos/experimento.csv")
+set.seed(42)
+datos <- data.frame(
+  tratamiento = factor(
+    rep(c("Control", "Dosis_baja", "Dosis_alta"), each = 20),
+    levels = c("Control", "Dosis_baja", "Dosis_alta")
+  ),
+  bloque      = factor(rep(1:4, times = 15)),
+  rendimiento = c(rnorm(20, 5.0, 0.8), rnorm(20, 6.2, 0.9), rnorm(20, 7.5, 1.0)),
+  conteo      = rpois(60, lambda = rep(c(3, 6, 10), each = 20))
+)
+```
+
+```{r descriptiva}
+#| label: tbl-desc
+#| tbl-cap: "Estadística descriptiva"
+datos |>
+  group_by(tratamiento) |>
+  summarise(n = n(), Media = mean(rendimiento), DE = sd(rendimiento)) |>
+  kable(digits = 3) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+## Especificación del modelo
+
+### Priors
+
+```{r priors}
+# Ver priors por defecto
+get_prior(rendimiento ~ tratamiento + (1 | bloque), data = datos, family = gaussian())
+
+# Definir priors propios
+priors <- c(
+  prior(normal(5, 3),   class = "Intercept"),
+  prior(normal(0, 2),   class = "b"),
+  prior(exponential(1), class = "sd"),
+  prior(exponential(1), class = "sigma")
+)
+```
+
+### Visualización de priors (prior predictive check)
+
+```{r prior-predictive}
+modelo_prior <- brm(
+  rendimiento ~ tratamiento + (1 | bloque),
+  data         = datos,
+  family       = gaussian(),
+  prior        = priors,
+  sample_prior = "only",
+  chains       = 2,
+  iter         = 2000,
+  seed         = 42,
+  file         = "cache/modelo_prior"
+)
+
+pp_check(modelo_prior, ndraws = 50) +
+  labs(title = "Simulaciones prior predictive")
+```
+
+## Ajuste del modelo
+
+```{r modelo-principal}
+modelo_bayes <- brm(
+  rendimiento ~ tratamiento + (1 | bloque),
+  data    = datos,
+  family  = gaussian(),
+  prior   = priors,
+  chains  = 4,
+  iter    = 4000,
+  warmup  = 1000,
+  cores   = 4,
+  seed    = 42,
+  file    = "cache/modelo_bayes_lmm"
+)
+```
+
+## Diagnósticos MCMC
+
+```{r diagnosticos}
+#| label: tbl-rhat
+#| tbl-cap: "R-hat y tamaño efectivo de muestra"
+as.data.frame(posterior_summary(modelo_bayes)) |>
+  tibble::rownames_to_column("Parámetro") |>
+  kable(digits = 3) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r trazas}
+#| label: fig-trazas
+#| fig-cap: "Trazas MCMC de los parámetros principales"
+#| fig-height: 7
+plot(modelo_bayes)
+```
+
+```{r rhat-plot}
+#| label: fig-rhat
+#| fig-cap: "R-hat y razón de tamaño efectivo"
+bayesplot::mcmc_rhat(brms::rhat(modelo_bayes))
+```
+
+## Posterior predictive check
+
+```{r ppc}
+#| label: fig-ppc
+#| fig-cap: "Posterior predictive check"
+pp_check(modelo_bayes, ndraws = 100)
+```
+
+## Inferencia
+
+### Resumen de efectos fijos
+
+```{r efectos-fijos}
+#| label: tbl-efectos
+#| tbl-cap: "Efectos fijos: media posterior e IC 95%"
+fixef(modelo_bayes) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("Parámetro") |>
+  kable(digits = 3) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+### Distribuciones posteriores
+
+```{r posteriores}
+#| label: fig-posteriores
+#| fig-cap: "Distribución posterior de efectos por tratamiento"
+modelo_bayes |>
+  spread_draws(b_tratamientoDosis_baja, b_tratamientoDosis_alta) |>
+  pivot_longer(starts_with("b_"),
+               names_to  = "Tratamiento",
+               values_to = "Efecto") |>
+  mutate(Tratamiento = gsub("b_tratamiento", "", Tratamiento)) |>
+  ggplot(aes(x = Efecto, y = Tratamiento, fill = Tratamiento)) +
+  ggdist::stat_halfeye(.width = c(0.66, 0.95), point_interval = "median_hdi") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+  scale_fill_brewer(palette = "Set1") +
+  labs(x = "Diferencia vs. Control", y = NULL,
+       title = "Efectos de tratamiento (mediana + HDI 66% y 95%)") +
+  theme(legend.position = "none")
+```
+
+### Comparaciones entre tratamientos
+
+```{r contrastes}
+#| label: tbl-contrastes
+#| tbl-cap: "Contrastes entre tratamientos (escala original)"
+em <- emmeans::emmeans(modelo_bayes, ~ tratamiento)
+emmeans::contrast(em, method = "pairwise") |>
+  as.data.frame() |>
+  kable(digits = 3) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+## Comparación de modelos (LOO-CV)
+
+```{r loo}
+#| label: tbl-loo
+#| tbl-cap: "Comparación de modelos mediante LOO-CV"
+modelo_nulo <- brm(
+  rendimiento ~ 1 + (1 | bloque),
+  data   = datos,
+  family = gaussian(),
+  chains = 4, iter = 4000, warmup = 1000, cores = 4, seed = 42,
+  file   = "cache/modelo_bayes_nulo"
+)
+
+loo_comp <- loo_compare(loo(modelo_bayes), loo(modelo_nulo))
+as.data.frame(loo_comp) |>
+  tibble::rownames_to_column("Modelo") |>
+  kable(digits = 2) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+## Conclusiones
+
+- Los resultados bayesianos muestran ...
+- La probabilidad posterior de que [tratamiento] sea superior a Control es ...
+- El modelo con tratamiento tuvo mejor ajuste (ELPD = ...) respecto al modelo nulo.
+
+## Referencias
+
+- Bürkner PC (2017). "brms: An R Package for Bayesian Multilevel Models Using Stan." *Journal of Statistical Software*, 80(1), 1–28.
+- Gelman A, Carlin JB, Stern HS, Dunson DB, Vehtari A, Rubin DB (2013). *Bayesian Data Analysis* (3rd ed.). CRC Press.
+- McElreath R (2020). *Statistical Rethinking* (2nd ed.). CRC Press.
+
+## Información de sesión
+
+```{r session}
+sessionInfo()
+```
