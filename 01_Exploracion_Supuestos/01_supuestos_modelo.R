@@ -27,15 +27,15 @@ print(shapiro.test(residuals(modelo)))
 cat("\n=== Homocedasticidad (Levene) ===\n")
 print(car::leveneTest(rendimiento ~ tratamiento, data = datos))
 
-cat("\n=== Diagnostico integral (performance) ===\n")
+cat("\n=== Diagnóstico integral (performance) ===\n")
 print(performance::check_model(modelo))
 
-# Graficos base de diagnostico
+# Gráficos base de diagnóstico
 par(mfrow = c(2, 2))
 plot(modelo)
 par(mfrow = c(1, 1))
 
-# Grafico complementario
+# Gráfico complementario
 p <- ggplot(datos, aes(tratamiento, rendimiento, fill = tratamiento)) +
   geom_boxplot(alpha = 0.7) +
   theme_minimal() +

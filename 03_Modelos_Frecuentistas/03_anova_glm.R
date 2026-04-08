@@ -14,7 +14,7 @@ d1$rendimiento <- with(d1,
 )
 
 anova1 <- aov(rendimiento ~ tratamiento, data = d1)
-cat("=== ANOVA 1 via ===\n")
+cat("=== ANOVA 1 vía ===\n")
 print(summary(anova1))
 
 # -------------------------------
@@ -36,7 +36,7 @@ base <- with(d2,
 d2$rendimiento <- base + rnorm(nrow(d2), 0, 0.35)
 
 anova2 <- aov(rendimiento ~ tratamiento * variedad, data = d2)
-cat("\n=== ANOVA 2 vias ===\n")
+cat("\n=== ANOVA 2 vías ===\n")
 print(summary(anova2))
 
 # -------------------------------
