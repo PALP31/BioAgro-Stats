@@ -27,7 +27,7 @@ if (requireNamespace("vegan", quietly = TRUE)) {
   perma <- vegan::adonis2(dist_bc ~ tratamiento + sitio, data = meta, permutations = 999)
   print(perma)
 
-  # Ordención auxiliar
+  # Ordenación auxiliar
   ord <- vegan::metaMDS(abund, distance = "bray", k = 2, trymax = 20, trace = 0)
   plot(ord$points, col = as.integer(meta$tratamiento), pch = 19,
        xlab = "MDS1", ylab = "MDS2", main = "Ordenación de comunidades simuladas")
