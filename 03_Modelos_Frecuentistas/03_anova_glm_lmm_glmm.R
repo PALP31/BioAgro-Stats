@@ -90,3 +90,57 @@ if (requireNamespace("lme4", quietly = TRUE)) {
 } else {
   message("Paquete 'lme4' no disponible. Instálalo con: install.packages('lme4')")
 }
+
+
+# =====================================================================
+# MODELOS MIXTOS PARA MEDIDAS REPETIDAS EN EL TIEMPO
+# Contexto: Ensayo de antagonismo in vitro (Biocontrol)
+# Variable: Diámetro de crecimiento del patógeno (ej. Botrytis)
+# Tratamientos: Diferentes cepas antagonistas (ej. Trichoderma)
+# =====================================================================
+
+# 1. Cargar paquetes necesarios
+# Si no los tienes, instálalos con install.packages(c("lme4", "lmerTest", "emmeans", "performance"))
+library(lme4)       # Ajuste de modelos mixtos
+library(lmerTest)   # Obtener p-valores para lme4
+library(emmeans)    # Comparaciones múltiples (Tukey)
+library(performance)# Evaluación de supuestos visual
+
+# 2. Simulación de datos longitudinales complejos
+set.seed(42)
+n_placas <- 5 # 5 cajas Petri (repeticiones) por tratamiento
+cepas <- c("Control", "Cepa_A", "Cepa_B", "Cepa_C")
+dias <- 1:5 # Evaluado durante 5 días
+
+datos_biocontrol <- expand.grid(Dia = dias, Placa_ID = 1:n_placas, Tratamiento = cepas)
+
+# Simulamos que el control crece rápido, Cepa A controla muy bien, B y C intermedio.
+datos_biocontrol$Crecimiento_mm <- with(datos_biocontrol, 
+                                        ifelse(Tratamiento == "Control", Dia * 15 + rnorm(100, 0, 2),
+                                               ifelse(Tratamiento == "Cepa_A", Dia * 3 + rnorm(100, 0, 1),
+                                                      Dia * 8 + rnorm(100, 0, 3))))
+
+# Factorizamos variables categóricas
+datos_biocontrol$Tratamiento <- as.factor(datos_biocontrol$Tratamiento)
+datos_biocontrol$Placa_ID <- as.factor(paste(datos_biocontrol$Tratamiento, datos_biocontrol$Placa_ID, sep="_"))
+
+# 3. Ajuste del Modelo Mixto
+# Efectos fijos: Tratamiento, Dia, y su interacción (Tratamiento * Dia)
+# Efecto aleatorio: Medidas repetidas en la misma caja Petri a lo largo del tiempo (1 | Placa_ID)
+modelo_lmm <- lmer(Crecimiento_mm ~ Tratamiento * Dia + (1 | Placa_ID), data = datos_biocontrol)
+
+# 4. Resumen y ANOVA del modelo
+summary(modelo_lmm)
+anova(modelo_lmm) # Anova tipo III con corrección de Satterthwaite
+
+# 5. Diagnóstico de supuestos (El paquete performance hace la magia aquí)
+check_model(modelo_lmm) # Gráficos de normalidad, homocedasticidad y efectos aleatorios
+
+# 6. Comparaciones múltiples (Post-hoc) para el Día 5
+medias_dia5 <- emmeans(modelo_lmm, ~ Tratamiento | Dia, at = list(Dia = 5))
+contrastes <- pairs(medias_dia5, adjust = "tukey")
+print(contrastes)
+
+
+
+
