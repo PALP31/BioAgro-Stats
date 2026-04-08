@@ -1,0 +1,85 @@
+---
+title: "Reporte Avanzado de Análisis Estadístico"
+author: "Equipo de investigación"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+## Contexto del estudio
+
+Describa aquí el objetivo biológico/agronómico y el diseño del experimento.
+
+## 1. Exploración de supuestos
+
+- Normalidad de residuos
+- Homocedasticidad
+- Diagnóstico visual de modelos
+
+```{r}
+# Fuente sugerida:
+# source("../01_Exploracion_Supuestos/01_supuestos_y_diagnostico_performance.R")
+```
+
+## 2. Diseño experimental
+
+- Bloques completos al azar (BCA)
+- Alpha-lattice para múltiples genotipos
+
+```{r}
+# source("../02_Diseno_Experimental/02_bca_y_alpha_lattice_estres.R")
+```
+
+## 3. Modelos frecuentistas
+
+- ANOVA
+- GLM (binomial/Poisson)
+- LMM/GLMM
+
+```{r}
+# source("../03_Modelos_Frecuentistas/03_anova_glm_lmm_glmm.R")
+```
+
+## 4. Estadística bayesiana
+
+- ANOVA bayesiano
+- Modelos mixtos bayesianos (brms)
+
+```{r}
+# source("../04_Estadistica_Bayesiana/04_anova_bayesiano.R")
+# source("../04_Estadistica_Bayesiana/04_modelos_mixtos_bayesianos_brms.R")
+```
+
+## 5. Machine Learning
+
+- Random Forest
+- XGBoost
+- SVM
+
+```{r}
+# source("../05_Machine_Learning/05_random_forest_estres_fenotipico.R")
+# source("../05_Machine_Learning/05_xgboost_estres_hidrico.R")
+# source("../05_Machine_Learning/05_svm_estres_termico.R")
+```
+
+## 6. Multivariado y ómicas
+
+- PCA
+- PLS-DA
+- PERMANOVA
+
+```{r}
+# source("../06_Multivariado_y_Omicas/06_pca_omics.R")
+# source("../06_Multivariado_y_Omicas/06_plsda_omics.R")
+# source("../06_Multivariado_y_Omicas/06_permanova_microbioma.R")
+```
+
+## Conclusiones integradas
+
+Resuma los hallazgos clave, la interpretación biológica y próximos pasos.
