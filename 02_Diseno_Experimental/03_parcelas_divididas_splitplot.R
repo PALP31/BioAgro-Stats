@@ -620,6 +620,67 @@ if (cv_error_b < 10) {
   cat("  → Precisión BAJA ⚠ considerar más repeticiones\n")
 }
 
+# ============================================================================
+# 10. EJERCICIO AVANZADO: DISEÑO DE PARCELAS SUB-SUBDIVIDIDAS (SPLIT-SPLIT-PLOT)
+# ============================================================================
+
 cat("\n", rep("=", 80), "\n", sep = "")
-cat("FIN DEL ANÁLISIS\n")
+cat("PARTE 10: EJERCICIO AVANZADO - SPLIT-SPLIT-PLOT\n")
+cat(rep("=", 80), "\n\n", sep = "")
+
+cat("ESCENARIO:\n")
+cat("Se evalúa la interacción de 3 niveles tecnológicos:
+1. Parcela Principal (Riego): Control vs Sequía
+2. Subparcela (Micorrizas): Con HMA vs Sin HMA (Hongo Micorrízico Arbuscular)
+3. Sub-subparcela (Fertilización NPK): Dosis 0, 50 y 100%
+DIFICULTAD: Estructura jerárquica de 3 niveles con múltiples errores.\n\n")
+
+# 1. Simulación de datos Split-Split-Plot
+set.seed(999)
+datos_ssp <- expand.grid(
+  Bloque = factor(paste0("B", 1:3)),
+  Riego = factor(c("Control", "Sequia")),
+  Micorriza = factor(c("Con_HMA", "Sin_HMA")),
+  NPK = factor(c("0", "50", "100"))
+) %>%
+  mutate(
+    # IDs para cada nivel de error
+    ID_Main = factor(paste0(Bloque, "_", Riego)),
+    ID_Sub = factor(paste0(ID_Main, "_", Micorriza))
+  )
+
+# Efectos y Simulación
+datos_ssp <- datos_ssp %>%
+  mutate(
+    ef_r = ifelse(Riego == "Sequia", -10, 0),
+    ef_m = ifelse(Micorriza == "Con_HMA", 5, 0),
+    ef_n = as.numeric(as.character(NPK)) * 0.1,
+    # Interacción: HMA ayuda más en Sequía y con poco NPK
+    ef_int = ifelse(Riego == "Sequia" & Micorriza == "Con_HMA", 4, 0),
+    # Errores en cada nivel
+    err_a = rnorm(n(), 0, 2)[as.numeric(ID_Main)],
+    err_b = rnorm(n(), 0, 1.5)[as.numeric(ID_Sub)],
+    err_c = rnorm(n(), 0, 1),
+    Biomasa = 30 + ef_r + ef_m + ef_n + ef_int + err_a + err_b + err_c
+  )
+
+# 2. Análisis con Modelo Mixto Jerárquico
+cat("=== Análisis Split-Split-Plot con Modelo Mixto ===\n")
+mod_ssp <- lmer(Biomasa ~ Riego * Micorriza * NPK + 
+                (1|Bloque) + (1|ID_Main) + (1|ID_Sub), 
+                data = datos_ssp)
+print(anova(mod_ssp))
+
+# 3. Interpretación de la Triple Interacción
+cat("\n=== Análisis de Interacción Triple ===\n")
+emm_ssp <- emmeans(mod_ssp, ~ Riego | Micorriza * NPK)
+print(pairs(emm_ssp))
+
+cat("\nRECOMENDACIÓN FINAL:\n")
+cat("Los diseños Split-Split-Plot son potentes pero requieren gran precisión. 
+Si la interacción triple es significativa, el efecto del fertilizante 
+depende tanto del riego como de la presencia de microorganismos simbiontes.\n")
+
+cat("\n", rep("=", 80), "\n", sep = "")
+cat("FIN DEL ANÁLISIS AVANZADO\n")
 cat(rep("=", 80), "\n", sep = "")

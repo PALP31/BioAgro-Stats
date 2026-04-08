@@ -34,8 +34,7 @@ design_dbca <- design.rcbd(
   trt = tratamientos,  # Tratamientos
   r = n_bloques,       # Número de repeticiones/bloques
   serie = 2,           # Serie para numeración de parcelas
-  seed = 789,          # Semilla para reproducibilidad
-  kinds = "Fisher-Yates" # Método de aleatorización
+  seed = 789          # Semilla para reproducibilidad
 )
 
 cat("\n=== Esquema del Diseño DBCA ===\n")
@@ -447,11 +446,11 @@ cat("  Efecto Bloque: F =", round(anova_table[[1]]$`F value`[2], 2),
 
 cat("SUPUESTOS:\n")
 cat("  Normalidad (Shapiro-Wilk): p =", round(shapiro_test$p.value, 4),
-    shapiro_test$p.value > 0.05 ? "✓" : "⚠", "\n")
+    ifelse(shapiro_test$p.value > 0.05, "✓", "⚠"), "\n")
 cat("  Homocedasticidad (Levene): p =", round(levene_test$`Pr(>F)`[1], 4),
-    leveve_test$`Pr(>F)`[1] > 0.05 ? "✓" : "⚠", "\n")
+    ifelse(levene_test$`Pr(>F)`[1] > 0.05, "✓", "⚠"), "\n")
 cat("  Independencia (Durbin-Watson): p =", round(dw_test$p, 4),
-    dw_test$p > 0.05 ? "✓" : "⚠", "\n\n")
+    ifelse(dw_test$p > 0.05, "✓", "⚠"), "\n\n")
 
 cat("MEJOR TRATAMIENTO SEGÚN TUKEY:\n")
 mejor_trat <- letras %>%
@@ -471,6 +470,75 @@ if (eficiencia > 0) {
 } else {
   cat("  → El bloqueo NO mejoró la precisión (considerar DCA en futuros ensayos)\n")
 }
+
+# ============================================================================
+# 9. EJERCICIO AVANZADO: ESTRÉS POR SALINIDAD Y PGPR (Heterocedasticidad)
+# ============================================================================
+
+cat("\n", rep("=", 80), "\n", sep = "")
+cat("PARTE 9: EJERCICIO AVANZADO - ESTRÉS SALINO Y PGPR\n")
+cat(rep("=", 80), "\n\n", sep = "")
+
+cat("ESCENARIO:\n")
+cat("Se evalúan 5 cepas de PGPR (Rhizobium, Pseudomonas, Bacillus, Azospirillum,
+Enterobacter) en un suelo con alta salinidad (CE > 4 dS/m). 
+El objetivo es mitigar el estrés osmótico en plántulas de tomate.
+DIFICULTAD: Los datos presentan varianza no constante (heterocedasticidad).\n\n")
+
+# 1. Simulación de datos con Heterocedasticidad
+set.seed(123)
+cepas <- c("Control", "Rhizobium", "Pseudomonas", "Bacillus", "Azospirillum")
+bloques <- paste0("B", 1:4)
+
+datos_salino <- expand.grid(Cepa = cepas, Bloque = bloques) %>%
+  mutate(
+    # Efectos de cepa (mejora de biomasa bajo salinidad)
+    efecto = case_when(
+      Cepa == "Control" ~ 0,
+      Cepa == "Rhizobium" ~ 2.5,
+      Cepa == "Pseudomonas" ~ 5.8,
+      Cepa == "Bacillus" ~ 4.2,
+      Cepa == "Azospirillum" ~ 3.1
+    ),
+    # Heterocedasticidad: mayor biomasa -> mayor varianza
+    sd_error = case_when(
+      Cepa == "Control" ~ 0.5,
+      Cepa == "Pseudomonas" ~ 2.5,  # Mucha más varianza
+      TRUE ~ 1.2
+    ),
+    Biomasa = 15 + efecto + rnorm(n(), 0, sd_error)
+  )
+
+cat("=== Diagnóstico de Heterocedasticidad ===\n")
+mod_basico <- aov(Biomasa ~ Cepa + Bloque, data = datos_salino)
+levene_sal <- car::leveneTest(Biomasa ~ Cepa, data = datos_salino)
+print(levene_sal)
+
+if(levene_sal$`Pr(>F)`[1] < 0.05) {
+  cat("\n⚠ ALERTA: Heterocedasticidad detectada. El ANOVA clásico no es óptimo.\n")
+}
+
+# 2. Solución Avanzada: Mínimos Cuadrados Generalizados (GLS)
+library(nlme)
+cat("\n=== Ajuste con GLS (Modelando la estructura de varianza) ===\n")
+# Permitimos que cada cepa tenga su propia varianza residual
+mod_gls <- gls(Biomasa ~ Cepa + Bloque, 
+               data = datos_salino,
+               weights = varIdent(form = ~ 1 | Cepa))
+
+anova_gls <- anova(mod_gls)
+print(anova_gls)
+
+# 3. Comparaciones Múltiples Robustas
+cat("\n=== Comparaciones de Medias con errores estándar ajustados ===\n")
+emm_sal <- emmeans::emmeans(mod_gls, ~ Cepa)
+pairs_sal <- pairs(emm_sal, adjust = "tukey")
+print(pairs_sal)
+
+cat("\nRECOMENDACIÓN FINAL:\n")
+cat("Cuando el estrés abiótico induce variabilidad diferencial entre tratamientos,
+utilice modelos GLS o transformaciones (log, raíz cuadrada) para estabilizar
+la varianza y evitar falsos positivos o pérdida de potencia.\n")
 
 cat("\n", rep("=", 80), "\n", sep = "")
 cat("FIN DEL ANÁLISIS\n")

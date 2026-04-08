@@ -485,6 +485,76 @@ if (h2 > 0.5) {
   cat("  → Considerar selección familiar en lugar de individual\n")
 }
 
+# ============================================================================
+# 10. EJERCICIO AVANZADO: ENSAYO MULTI-AMBIENTAL (MET) Y ESTRÉS TÉRMICO
+# ============================================================================
+
 cat("\n", rep("=", 80), "\n", sep = "")
-cat("FIN DEL ANÁLISIS\n")
+cat("PARTE 10: EJERCICIO AVANZADO - MET Y ESTRÉS TÉRMICO\n")
+cat(rep("=", 80), "\n\n", sep = "")
+
+cat("ESCENARIO:\n")
+cat("Evaluamos los mismos 96 genotipos en 2 localidades:
+1. Localidad A (Ambiente Óptimo): 20-25°C
+2. Localidad B (Ambiente de Estrés Térmico): 35-40°C durante floración.
+El objetivo es identificar genotipos tolerantes al calor (GxE).\n\n")
+
+# 1. Simulación de datos MET (Genotipo x Ambiente)
+set.seed(321)
+ambientes <- c("Optimo", "Estres_Termico")
+
+datos_met <- expand.grid(
+  genotype = levels(datos$genotype),
+  env = ambientes,
+  rep = factor(1:2) # 2 reps por sitio
+) %>%
+  mutate(
+    # Efecto del ambiente
+    efecto_env = ifelse(env == "Optimo", 0, -1200),
+    # GxE: Algunos genotipos sufren más que otros
+    tol_calor = rnorm(n_genotipos, 0, 300)[as.numeric(genotype)],
+    efecto_gxe = ifelse(env == "Estres_Termico", tol_calor, 0),
+    # Rendimiento
+    rendimiento = 4500 + efecto_env + efecto_gxe + rnorm(n(), 0, 200)
+  )
+
+# 2. Análisis GxE con Modelo Mixto
+cat("=== Análisis de Interacción Genotipo x Ambiente (GxE) ===\n")
+mod_met <- lmer(rendimiento ~ env + (1|genotype) + (1|genotype:env), 
+                data = datos_met)
+print(summary(mod_met))
+
+# 3. Estabilidad y Selección
+cat("\n=== Componentes de Varianza GxE ===\n")
+var_met <- as.data.frame(VarCorr(mod_met))
+print(var_met)
+
+cat("\nINTERPRETACIÓN GxE:\n")
+cat("Si la varianza G:E es alta, la selección debe hacerse por ambiente.
+Genotipos con BLUPs positivos en 'Estres_Termico' son candidatos para
+programas de mejoramiento en zonas cálidas.\n")
+
+# 4. Gráfico de Estabilidad (Reactividad al ambiente)
+library(ggrepel)
+df_estabilidad <- datos_met %>%
+  group_by(genotype, env) %>%
+  summarise(media = mean(rendimiento), .groups = "drop") %>%
+  pivot_wider(names_from = env, values_from = media)
+
+plot_met <- ggplot(df_estabilidad, aes(x = Optimo, y = Estres_Termico)) +
+  geom_point(color = "#2E86AB", alpha = 0.6) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  geom_text_repel(data = head(df_estabilidad[order(df_estabilidad$Estres_Termico, decreasing = T),], 5),
+                  aes(label = genotype), box.padding = 0.5) +
+  labs(title = "Estabilidad de Genotipos: Óptimo vs Estrés Térmico",
+       subtitle = "Genotipos sobre la línea roja rinden proporcionalmente mejor bajo estrés",
+       x = "Rendimiento en Ambiente Óptimo",
+       y = "Rendimiento en Estrés Térmico") +
+  theme_minimal()
+
+print(plot_met)
+ggsave("02_Diseno_Experimental/02_alpha_lattice_met.png", plot_met, width = 8, height = 6)
+
+cat("\n", rep("=", 80), "\n", sep = "")
+cat("FIN DEL ANÁLISIS MET\n")
 cat(rep("=", 80), "\n", sep = "")
