@@ -41,8 +41,9 @@ incomp <- expand.grid(
 )
 
 # Se simula una estructura con bloque incompleto anidado en repeticion
+treatment_slope <- -1.2
 incomp$y <- 50 +
-  as.numeric(incomp$tratamiento) * (-1.2) +
+  as.numeric(incomp$tratamiento) * treatment_slope +
   rnorm(nlevels(incomp$rep), 0, 1.5)[incomp$rep] +
   rnorm(nlevels(incomp$bloque_incomp), 0, 1.0)[incomp$bloque_incomp] +
   rnorm(nrow(incomp), 0, 1.8)

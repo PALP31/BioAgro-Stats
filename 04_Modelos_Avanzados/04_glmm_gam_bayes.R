@@ -84,7 +84,8 @@ bayes_dat$rendimiento <- mu + rnorm(nrow(bayes_dat), 0, 0.5)
 formula_brm <- bf(rendimiento ~ tratamiento + (1 | bloque))
 priors_brm <- c(
   prior(normal(0, 2), class = "b"),
-  prior(student_t(3, 0, 2.5), class = "sigma")
+  # Prior débilmente informativo para la desviación residual
+  prior(exponential(1), class = "sigma")
 )
 
 # Ejecutar solo cuando se desee ajustar:
