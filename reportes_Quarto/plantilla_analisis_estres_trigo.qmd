@@ -1,0 +1,71 @@
+---
+title: "Informe de análisis estadístico: estrés térmico en trigo"
+subtitle: "Ciencias biológicas y agronómicas"
+author: "Equipo de análisis"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: show
+    theme: cosmo
+  pdf:
+    toc: true
+    number-sections: true
+execute:
+  echo: true
+  warning: false
+  message: false
+editor: visual
+---
+
+## 1. Introducción
+
+Describir objetivo experimental, hipótesis y variables de respuesta.
+
+## 2. Datos y control de calidad
+
+- Origen de datos
+- Criterios de limpieza
+- Variables incluidas
+
+## 3. Exploración y supuestos
+
+```{r}
+# source("../01_Exploracion_Supuestos/01_supuestos_modelo.R")
+```
+
+## 4. Diseño experimental
+
+```{r}
+# source("../02_Diseno_Experimental/02_disenos_bloques.R")
+```
+
+## 5. Modelos frecuentistas
+
+```{r}
+# source("../03_Modelos_Frecuentistas/03_anova_glm.R")
+```
+
+## 6. Modelos avanzados
+
+```{r}
+# source("../04_Modelos_Avanzados/04_glmm_gam_bayes.R")
+```
+
+## 7. Multivariado y ómicas
+
+```{r}
+# source("../05_Multivariado_y_Omicas/05_pca_basico.R")
+```
+
+## 8. Conclusiones
+
+Resumir hallazgos principales, implicaciones biológicas/agronómicas y próximos pasos.
+
+## 9. Reproducibilidad
+
+- Semilla(s) de simulación usadas.
+- Versiones de paquetes R.
+- Fecha de ejecución del reporte.
