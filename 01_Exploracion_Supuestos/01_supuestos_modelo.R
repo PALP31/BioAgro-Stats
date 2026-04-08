@@ -40,7 +40,7 @@ p <- ggplot(datos, aes(tratamiento, rendimiento, fill = tratamiento)) +
   geom_boxplot(alpha = 0.7) +
   theme_minimal() +
   labs(
-    title = "Rendimiento por nivel de estres termico",
+    title = "Rendimiento por nivel de estrés térmico",
     x = "Tratamiento",
     y = "Rendimiento (t/ha)"
   )
