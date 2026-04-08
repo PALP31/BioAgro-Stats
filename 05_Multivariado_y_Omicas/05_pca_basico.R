@@ -1,5 +1,5 @@
 # 05_Multivariado_y_Omicas/05_pca_basico.R
-# PCA basico con variables fisiologicas simuladas
+# PCA básico con variables fisiológicas simuladas
 
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 set.seed(777)
 
 n <- 80
-trat <- factor(rep(c("Control", "Moderado", "Severo", "Recuperacion"), each = n / 4))
+trat <- factor(rep(c("Control", "Moderado", "Severo", "Recuperación"), each = n / 4))
 
 datos <- data.frame(
   tratamiento = trat,
@@ -31,5 +31,5 @@ scores$tratamiento <- datos$tratamiento
 p <- ggplot(scores, aes(PC1, PC2, color = tratamiento)) +
   geom_point(size = 2, alpha = 0.85) +
   theme_minimal() +
-  labs(title = "PCA: variables fisiologicas de estres", x = "PC1", y = "PC2")
+  labs(title = "PCA: variables fisiológicas de estrés", x = "PC1", y = "PC2")
 print(p)

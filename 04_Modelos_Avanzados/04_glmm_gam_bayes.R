@@ -29,7 +29,7 @@ eta <- with(glmm_dat,
     0.08 * tiempo
 )
 
-# Conteo de eventos de dano
+# Conteo de eventos de daño
 u_parcela <- rnorm(n_plot, 0, 0.25)
 u_tiempo <- rnorm(length(tiempo), 0, 0.15)
 
@@ -68,9 +68,9 @@ cat("\n=== GAM ===\n")
 print(summary(mod_gam))
 
 # -------------------------------
-# 3) Estructura Bayesiana basica (brms)
+# 3) Estructura Bayesiana básica (brms)
 # -------------------------------
-# Nota: este bloque muestra la estructura. Puede requerir tiempo de compilacion.
+# Nota: este bloque muestra la estructura. Puede requerir tiempo de compilación.
 bayes_dat <- data.frame(
   bloque = factor(rep(1:5, each = 20)),
   tratamiento = factor(rep(c("Control", "Moderado", "Severo", "Severo"), length.out = 100))

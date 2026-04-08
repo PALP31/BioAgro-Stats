@@ -1,5 +1,5 @@
 # 01_Exploracion_Supuestos/01_supuestos_modelo.R
-# Ensayo simulado: estres termico en trigo
+# Ensayo simulado: estrés térmico en trigo
 
 suppressPackageStartupMessages({
   library(car)

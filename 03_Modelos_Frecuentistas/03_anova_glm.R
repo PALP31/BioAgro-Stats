@@ -1,10 +1,10 @@
 # 03_Modelos_Frecuentistas/03_anova_glm.R
-# Ejemplos: ANOVA 1 y 2 vias, GLM Poisson y Binomial
+# Ejemplos: ANOVA 1 y 2 vías, GLM Poisson y Binomial
 
 set.seed(100)
 
 # -------------------------------
-# 1) ANOVA de una via
+# 1) ANOVA de una vía
 # -------------------------------
 d1 <- data.frame(
   tratamiento = factor(rep(c("Control", "Moderado", "Severo"), each = 25))
@@ -18,7 +18,7 @@ cat("=== ANOVA 1 via ===\n")
 print(summary(anova1))
 
 # -------------------------------
-# 2) ANOVA de dos vias con interaccion
+# 2) ANOVA de dos vías con interacción
 # -------------------------------
 d2 <- expand.grid(
   tratamiento = factor(c("Control", "Moderado", "Severo")),
