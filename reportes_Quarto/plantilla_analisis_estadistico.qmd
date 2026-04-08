@@ -22,7 +22,11 @@ Describe el objetivo del experimento, hipótesis y variables principales.
 #| label: cargar-datos
 #| echo: true
 
-# Ajusta esta ruta según tu proyecto
+# Se asume esta estructura del repo:
+# Scripts-estadistica-/
+#   ├─ datos/
+#   │   └─ tu_archivo.csv
+#   └─ reportes_Quarto/
 datos <- read.csv("../datos/tu_archivo.csv")
 str(datos)
 summary(datos)

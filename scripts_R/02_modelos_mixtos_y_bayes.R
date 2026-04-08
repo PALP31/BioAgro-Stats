@@ -70,10 +70,10 @@ modelo_bayes <- brm(
   data = datos,
   family = gaussian(),
   prior = priors_basicos,
-  chains = 2,
+  chains = 4,
   iter = 2000,
   warmup = 1000,
-  cores = 2,
+  cores = 4,
   seed = 123
 )
 

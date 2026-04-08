@@ -64,8 +64,10 @@ shapiro_res <- shapiro.test(residuals(modelo_lm))
 print(shapiro_res)
 
 # Complemento visual de normalidad (recomendado para muestras moderadas/grandes)
-qqnorm(residuals(modelo_lm))
-qqline(residuals(modelo_lm), col = "red", lwd = 2)
+invisible({
+  qqnorm(residuals(modelo_lm))
+  qqline(residuals(modelo_lm), col = "red", lwd = 2)
+})
 
 # 2) Homocedasticidad
 # 2a. Levene (por factor de tratamiento)
