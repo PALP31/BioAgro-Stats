@@ -1,4 +1,4 @@
-# ============================================================================
+ # ============================================================================
 # 02_permanova_nmds_edafofauna.R
 # Análisis de Comunidades: PERMANOVA y NMDS
 # Contexto: Comunidades de Edafofauna tratadas con Bioestimulantes

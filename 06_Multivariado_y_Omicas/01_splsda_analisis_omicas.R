@@ -9,7 +9,9 @@
 # ============================================================================
 
 library(mixOmics)
-
+library(MASS)
+library(ggplot2)
+library(lattice)
 library(tidyverse)
 
 set.seed(123)
