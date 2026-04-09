@@ -1,8 +1,10 @@
 # ============================================================================
-# 03_parcelas_divididas_splitplot.R (VERSIÓN EXPERTA - HIERARCHICAL DIAG)
-# Diseño de Parcelas Sub-subdivididas (Split-Split-Plot)
+# 03_parcelas_divididas_splitplot.R (SPLIT-SPLIT-PLOT)
+# Diseño de Parcelas Sub-subdivididas (Riego x HMA x NPK)
 # ============================================================================
-# Paquetes: agricolae, tidyverse, lme4, lmerTest, performance, DHARMa, emmeans
+# Este diseño es el más complejo: Los factores se aplican a diferentes escalas.
+# Parcela Principal: Riego (Sequía). Subparcela: HMA (Inóculo).
+# Sub-subparcela: NPK (Fertilizante). Cada nivel tiene su propio error.
 # ============================================================================
 
 library(agricolae)
@@ -10,32 +12,28 @@ library(tidyverse)
 library(lme4)
 library(lmerTest)
 library(performance)
-library(DHARMa)
 library(emmeans)
 
 set.seed(123)
 
-# 1. GENERACIÓN DEL DISEÑO EXPERIMENTAL (REGLA ESTRICTA)
+# 1. GENERACIÓN DEL DISEÑO
+# Regla: design.split(trt1, trt2, r, design="rcbd", serie=2, seed=123)
 riegos <- c("Control", "Drought")
 micorr <- c("No_HMA", "HMA")
-r <- 3
+r <- 3 # Bloques
 design_sp <- design.split(trt1 = riegos, trt2 = micorr, r = r, 
                           design = "rcbd", serie = 2, seed = 123)
 datos_sp <- design_sp$book
 
-# 2. ESCALANDO A SPLIT-SPLIT-PLOT (Riego x Micorrizas x NPK)
+# Escalamiento manual a Sub-subparcelas (NPK)
 npk_levels <- c("0%", "50%", "100%")
 datos_ssp <- datos_sp %>%
   group_by(plots) %>%
   slice(rep(1, each = length(npk_levels))) %>%
   mutate(npk = rep(npk_levels, length.out = n())) %>%
-  ungroup() %>%
-  mutate(
-    id_main = factor(paste0(block, "_", riegos)),
-    id_sub = factor(paste0(id_main, "_", micorr))
-  )
+  ungroup()
 
-# Simulación de datos con variabilidad jerárquica compleja
+# 2. SIMULACIÓN DE BIOMASA (TRIPLE INTERACCIÓN)
 datos_ssp <- datos_ssp %>%
   mutate(
     yield_base = case_when(
@@ -43,48 +41,48 @@ datos_ssp <- datos_ssp %>%
       riegos == "Drought" & micorr == "HMA" ~ 48 + as.numeric(gsub("%", "", npk))*0.2,
       TRUE ~ 32 + as.numeric(gsub("%", "", npk))*0.15
     ),
-    err_main = rnorm(n(), 0, 4)[as.numeric(id_main)],
-    err_sub = rnorm(n(), 0, 2.5)[as.numeric(id_sub)],
-    err_resid = rnorm(n(), 0, 1.2),
-    biomasa = yield_base + err_main + err_sub + err_resid
+    # Errores jerárquicos por nivel de parcela
+    err_main = rnorm(n(), 0, 4), 
+    err_sub = rnorm(n(), 0, 2),
+    biomasa = yield_base + err_main + err_sub + rnorm(n(), 0, 1)
   )
 
-# 3. ANÁLISIS DE PARCELAS SUB-SUBDIVIDIDAS (MODELO JERÁRQUICO)
-mod_ssp <- lmer(biomasa ~ riegos * micorr * npk + 
-                  (1|block) + (1|block:riegos) + (1|block:riegos:micorr), 
-                data = datos_ssp)
+cat("\n--- [1] ANÁLISIS DE VARIANZA JERÁRQUICO (Split-Split-Plot) ---\n")
+# Estructura de error compleja: (1|block) + (1|block:riegos) + (1|block:riegos:micorr)
+modelo_ssp <- lmer(biomasa ~ riegos * micorr * npk + 
+                     (1|block) + (1|block:riegos) + (1|block:riegos:micorr), 
+                   data = datos_ssp)
 
-# 4. DIAGNÓSTICO TOP TIER: SUPUESTOS JERÁRQUICOS
-cat("\n", rep("=", 60), "\n")
-cat("DIAGNÓSTICO JERÁRQUICO DE SUPUESTOS\n")
-cat(rep("=", 60), "\n")
+print(anova(modelo_ssp))
 
-# --- 4.1 Evaluación por Niveles con DHARMa ---
-sim_ssp <- simulateResiduals(mod_ssp)
+# EXPLICACIÓN: El factor Riego (Parcela Principal) es el más difícil de probar
+# (menos grados de libertad). El NPK (Sub-subparcela) es el más preciso.
 
-cat("\n[1] VALIDEZ GLOBAL DEL MODELO (DHARMa):\n")
-print(testUniformity(sim_ssp))
+cat("\n--- [2] EVALUACIÓN INTEGRAL DE SUPUESTOS ---\n")
+# Usar performance::check_model() para validar la estructura jerárquica.
+print(check_model(modelo_ssp))
 
-cat("\n[2] SUPUESTO DE INDEPENDENCIA EN PARCELA PRINCIPAL (Riego):\n")
-# Recalcular residuos para el factor principal
-res_main <- recalculateResiduals(sim_ssp, group = datos_ssp$id_main)
-print(testUniformity(res_main))
+cat("\n--- [3] GRÁFICOS DE INTERACCIÓN TRIPLES ---\n")
+# Medias estimadas por emmeans
+emm_ssp <- emmeans(modelo_ssp, ~ npk | micorr * riegos) %>% as.data.frame()
 
-cat("\n[3] SUPUESTO DE INDEPENDENCIA EN SUBPARCELA (Micorriza):\n")
-res_sub <- recalculateResiduals(sim_ssp, group = datos_ssp$id_sub)
-print(testUniformity(res_sub))
+# Gráfico visualmente potente
+ggplot(emm_ssp, aes(x = npk, y = emmean, color = micorr, group = micorr)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 4) +
+  # El facet_wrap permite ver la interacción según Riego
+  facet_wrap(~ riegos, labeller = label_both) +
+  labs(title = "Sinergia Microorganismos x Fertilizante bajo Sequía",
+       subtitle = "Diseño de Parcelas Sub-subdivididas (Split-Split-Plot)",
+       x = "Dosis de NPK (% de la recomendación)",
+       y = "Biomasa Estimada (g/planta)") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold", size = 11),
+        plot.title = element_text(face = "bold", size = 14),
+        legend.title = element_text(face = "bold")) +
+  scale_color_manual(values = c("HMA" = "#228B22", "No_HMA" = "#B22222"))
 
-# --- 4.2 Heterocedasticidad entre Factores Críticos ---
-cat("\n[4] HETEROCEDASTICIDAD ENTRE NIVELES DE RIEGO:\n")
-print(testCategorical(sim_ssp, catPred = datos_ssp$riegos))
-
-# 5. RESUMEN DE COMPONENTES DE VARIANZA (ERRORES A, B, C)
-cat("\n--- Componentes de Error (Varianza Aleatoria) ---\n")
-var_ssp <- as.data.frame(VarCorr(mod_ssp))
-print(var_ssp)
-
-# 6. COMPARACIONES TRIPLES DE ALTO NIVEL
-cat("\n--- Efecto Sinergia HMA x NPK bajo Sequía ---\n")
-print(pairs(emmeans(mod_ssp, ~ micorr | riegos * npk), adjust = "tukey"))
-
-cat("\n--- Script Split-Split-Plot Experto Finalizado ---\n")
+cat("\n--- [4] ¿POR QUÉ USAMOS ESTAS PRUEBAS? ---\n")
+cat("- Modelos Mixtos: Los únicos que modelan la 'dependencia' de subparcelas.\n")
+cat("- Emmeans: Permiten comparar medias en diseños desbalanceados o complejos.\n")
+cat("- Faceting: Permite ver si el inóculo (HMA) compensa la falta de fertilizante NPK.\n")

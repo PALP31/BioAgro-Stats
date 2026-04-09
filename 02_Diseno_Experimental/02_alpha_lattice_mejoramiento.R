@@ -1,75 +1,84 @@
 # ============================================================================
-# 02_alpha_lattice_mejoramiento.R (VERSIÓN EXPERTA - DHARMA & MIXED)
-# Diseño Alpha-Lattice (GxE y Estrés Térmico)
+# 02_alpha_lattice_mejoramiento.R (GxE Y ESTRÉS TÉRMICO)
+# Diseño Alpha-Lattice (Bloques Incompletos)
 # ============================================================================
-# Paquetes: agricolae, tidyverse, lme4, lmerTest, performance, DHARMa, nortest
+# Este diseño es vital en mejoramiento cuando evaluamos muchos genotipos.
+# Un bloque completo sería muy grande y heterogéneo; los bloques incompletos
+# controlan la variabilidad espacial a menor escala.
 # ============================================================================
 
 library(agricolae)
 library(tidyverse)
-library(lme4)
-library(lmerTest)
-library(performance)
-library(DHARMa) # Diagnóstico avanzado con residuos simulados
-library(nortest)
+library(lme4)        # Para modelos mixtos
+library(lmerTest)    # Para p-valores en modelos mixtos
+library(performance) # Diagnóstico avanzado de modelos mixtos
+library(emmeans)     # Medias ajustadas
 
 set.seed(123)
 
-# 1. GENERACIÓN DEL DISEÑO EXPERIMENTAL (REGLA ESTRICTA)
+# 1. GENERACIÓN DEL DISEÑO
+# Regla: design.alpha(trt, k, r, serie=2, seed=123)
+# k=4 (tamaño de bloque), r=2 (repeticiones)
 genotipos <- paste0("G_", sprintf("%02d", 1:16))
-k <- 4; r <- 2
-design_alpha <- design.alpha(trt = genotipos, k = k, r = r, serie = 2, seed = 123)
+design_alpha <- design.alpha(trt = genotipos, k = 4, r = 2, serie = 2, seed = 123)
 datos_alpha <- design_alpha$book
 
-# 2. EJERCICIO AVANZADO: MULTI-AMBIENTAL (MET) Y ESTRÉS TÉRMICO
+# 2. EJERCICIO AVANZADO: INTERACCIÓN GENOTIPO X AMBIENTE (GxE)
+# Escenario: ¿Cómo rinde el trigo en un ambiente Óptimo vs Calor Extremo?
 datos_met <- bind_rows(
   datos_alpha %>% mutate(env = "Optimo", ef_env = 0),
-  datos_alpha %>% mutate(env = "Calor_Extremo", ef_env = -1400)
+  datos_alpha %>% mutate(env = "Calor_Extremo", ef_env = -1500)
 )
 
-# Efectos GxE Dinámicos
+# Simulamos efectos GxE: Algunos genotipos son resilientes al calor
 datos_met <- datos_met %>%
   mutate(
-    yield_base = 5200 + ef_env + rnorm(16, 0, 500)[as.numeric(genotipos)],
-    yield = yield_base + rnorm(n(), 0, 200)
+    # agricolae genera la columna 'genotipos'
+    g_id = as.numeric(as.factor(genotipos)),
+    yield_base = 5000 + ef_env + rnorm(16, 0, 400)[g_id],
+    # Interacción: GxE dinámico
+    gxe_ef = ifelse(env == "Calor_Extremo", rnorm(16, 0, 300)[g_id], 0),
+    yield = yield_base + gxe_ef + rnorm(n(), 0, 150)
   )
 
-# 3. MODELO MIXTO DE ALTO NIVEL
-mod_lmer <- lmer(yield ~ env + (1|genotipos) + (1|genotipos:env) + 
-                   (1|env:replication) + (1|env:replication:block), data = datos_met)
+cat("\n--- [1] MODELO MIXTO PARA ALPHA-LATTICE (GxE) ---\n")
+# Usamos LMER porque los bloques incompletos son efectos aleatorios.
+# Formula: yield ~ Ambiente + (1|Genotipo) + (1|Genotipo:Ambiente) + Errores jerárquicos
+modelo_mixto <- lmer(yield ~ env + (1|genotipos) + (1|genotipos:env) + 
+                       (1|env:replication/block), data = datos_met)
 
-# 4. DIAGNÓSTICO TOP TIER CON DHARMA (RESIDUOS SIMULADOS)
-cat("\n", rep("=", 60), "\n")
-cat("DIAGNÓSTICO AVANZADO: MODELO MIXTO (DHARMa)\n")
-cat(rep("=", 60), "\n")
+print(summary(modelo_mixto))
 
-# --- 4.1 Generar Residuos Simulados ---
-sim_res <- simulateResiduals(fittedModel = mod_lmer, n = 1000)
+# EXPLICACIÓN: El modelo mixto estima la varianza de los genotipos (V_g)
+# y la varianza de la interacción (V_gxe). Si V_gxe es alta, los genotipos
+# cambian de ranking según el ambiente.
 
-# --- 4.2 Pruebas de Diagnóstico DHARMa ---
-cat("\n[1] TEST DE UNIFORMIDAD (KS Test):\n")
-print(testUniformity(sim_res))
+cat("\n--- [2] EVALUACIÓN DE SUPUESTOS CON PERFORMANCE ---\n")
+# check_model nos muestra si el modelo mixto es válido.
+# Un gráfico clave aquí es la normalidad de los efectos aleatorios (QQ-plot).
+print(check_model(modelo_mixto))
 
-cat("\n[2] TEST DE SOBREDISPERSIÓN:\n")
-print(testDispersion(sim_res))
+cat("\n--- [3] GRÁFICO DE INTERACCIÓN GxE (REACTION NORMS) ---\n")
+# ¿Para qué sirve? Visualiza la estabilidad. Líneas planas = estables.
+# Líneas cruzadas = Interacción significativa (Cambio de ranking).
 
-cat("\n[3] TEST DE OUTLIERS:\n")
-print(testOutliers(sim_res))
+# Medias estimadas por combinación G x E
+emm_gxe <- emmeans(modelo_mixto, ~ genotipos | env) %>% as.data.frame()
 
-# --- 4.3 Heterocedasticidad por Variable (GxE) ---
-cat("\n[4] HETEROCEDASTICIDAD POR AMBIENTE (ENV):\n")
-print(testCategorical(sim_res, catPred = datos_met$env))
+ggplot(emm_gxe, aes(x = env, y = emmean, group = genotipos, color = genotipos)) +
+  # Líneas que conectan las medias estimadas de cada genotipo entre ambientes
+  stat_summary(fun = mean, geom = "line", alpha = 0.6, linewidth = 1) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(title = "Interacción Genotipo x Ambiente en Trigo",
+       subtitle = "Respuesta diferencial a ambientes: Óptimo vs Calor Extremo",
+       x = "Ambiente (Estrés Térmico)",
+       y = "Rendimiento Estimado (kg/ha)") +
+  theme_minimal() +
+  theme(legend.position = "none", # Muchos genotipos para leyenda
+        plot.title = element_text(face = "bold", size = 14),
+        axis.title = element_text(face = "bold"))
 
-# 5. DIAGNÓSTICO CLÁSICO ADICIONAL
-res_lmer <- residuals(mod_lmer)
-cat("\n[5] NORMALIDAD (Anderson-Darling): p =", ad.test(res_lmer)$p.value, "\n")
-
-# 6. VISUALIZACIÓN DHARMA
-# plot(sim_res) # Esto abriría una ventana gráfica con 4 paneles diagnósticos
-
-# 7. PARÁMETROS GENÉTICOS (Heredabilidad)
-cat("\n--- Componentes de Varianza ---\n")
-var_comp <- as.data.frame(VarCorr(mod_lmer))
-print(var_comp)
-
-cat("\n--- Script Alpha-Lattice Experto Finalizado ---\n")
+cat("\n--- [4] ¿POR QUÉ USAMOS ESTE GRÁFICO? ---\n")
+cat("- Identifica genotipos con alta plasticidad fenotípica.\n")
+cat("- Permite seleccionar variedades que mantienen el rendimiento bajo calor.\n")
+cat("- El uso de 'stat_summary' garantiza que graficamos las tendencias reales.\n")
