@@ -56,6 +56,7 @@ print(summary(modelo_mixto))
 cat("\n--- [2] EVALUACIÓN DE SUPUESTOS CON PERFORMANCE ---\n")
 # check_model nos muestra si el modelo mixto es válido.
 # Un gráfico clave aquí es la normalidad de los efectos aleatorios (QQ-plot).
+x11()
 print(check_model(modelo_mixto))
 
 cat("\n--- [3] GRÁFICO DE INTERACCIÓN GxE (REACTION NORMS) ---\n")
@@ -63,22 +64,26 @@ cat("\n--- [3] GRÁFICO DE INTERACCIÓN GxE (REACTION NORMS) ---\n")
 # Líneas cruzadas = Interacción significativa (Cambio de ranking).
 
 # Medias estimadas por combinación G x E
-emm_gxe <- emmeans(modelo_mixto, ~ genotipos | env) %>% as.data.frame()
 
-ggplot(emm_gxe, aes(x = env, y = emmean, group = genotipos, color = genotipos)) +
-  # Líneas que conectan las medias estimadas de cada genotipo entre ambientes
+cat("\n--- Gráfico de Interacción Genotipo x Ambiente (GxE) ---\n")
+
+# Usamos datos_met directamente. stat_summary calculará las medias por nosotros.
+grafico_gxe <- ggplot(datos_met, aes(x = env, y = yield, group = genotipos, color = genotipos)) +
   stat_summary(fun = mean, geom = "line", alpha = 0.6, linewidth = 1) +
-  geom_point(size = 3, alpha = 0.8) +
+  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.8) +
   labs(title = "Interacción Genotipo x Ambiente en Trigo",
-       subtitle = "Respuesta diferencial a ambientes: Óptimo vs Calor Extremo",
+       subtitle = "Respuesta diferencial: Óptimo vs Calor Extremo",
        x = "Ambiente (Estrés Térmico)",
-       y = "Rendimiento Estimado (kg/ha)") +
+       y = "Rendimiento Promedio (kg/ha)") +
   theme_minimal() +
-  theme(legend.position = "none", # Muchos genotipos para leyenda
+  theme(legend.position = "none", # Ocultamos la leyenda porque son muchos genotipos
         plot.title = element_text(face = "bold", size = 14),
         axis.title = element_text(face = "bold"))
+
+print(grafico_gxe)
 
 cat("\n--- [4] ¿POR QUÉ USAMOS ESTE GRÁFICO? ---\n")
 cat("- Identifica genotipos con alta plasticidad fenotípica.\n")
 cat("- Permite seleccionar variedades que mantienen el rendimiento bajo calor.\n")
 cat("- El uso de 'stat_summary' garantiza que graficamos las tendencias reales.\n")
+
