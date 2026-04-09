@@ -1,13 +1,60 @@
-# Scripts-estadistica-
+# 🧬 BioAgro-Stats: Repositorio de Análisis Estadístico Avanzado para Biotecnología y Agronomía
 
-Biblioteca de análisis estadístico aplicado a biotecnología vegetal, ciencias agronómicas y microbiología.
+Este repositorio centraliza una colección robusta de scripts en **R** diseñados para el análisis riguroso de datos experimentales en ciencias biológicas, agrónomicas y biotecnológicas. Desde la validación exhaustiva de supuestos hasta el modelado bayesiano y machine learning, cada módulo está optimizado para garantizar la integridad científica y la reproducibilidad de los resultados.
 
-## Estructura
+---
 
-- `01_Exploracion_Supuestos`: normalidad, homocedasticidad y diagnóstico (`performance`).
-- `02_Diseno_Experimental`: BCA y alpha-lattice para ensayos de sequía/salinidad.
-- `03_Modelos_Frecuentistas`: ANOVA, GLM y LMM/GLMM con datos simulados.
-- `04_Estadistica_Bayesiana`: ANOVA bayesiano y modelos mixtos con `brms`.
-- `05_Machine_Learning`: Random Forest, XGBoost y SVM para predicción fenotípica.
-- `06_Multivariado_y_Omicas`: PCA, PLS-DA y PERMANOVA para matrices grandes.
-- `reportes_Quarto`: plantilla `.qmd` para reportar resultados integrados.
+## 📂 Contenido del Repositorio
+
+| Módulo | Descripción | Herramientas Clave |
+| :--- | :--- | :--- |
+| **01. Exploración y Supuestos** | Diagnóstico experto de modelos. Validación de normalidad, homocedasticidad e independencia mediante residuos simulados y análisis visual de alto nivel. | `performance`, `DHARMa`, `easystats` |
+| **02. Diseño Experimental** | Implementación de diseños clásicos y complejos: DBCA, Alpha-Lattice para mejoramiento genético y Parcelas Divididas (Split-plot). | `agricolae`, `emmeans`, `multcomp` |
+| **03. Modelos Frecuentistas** | Modelado clásico mediante ANOVA, Modelos Lineales Generalizados (GLM) para conteos y Modelos Mixtos (LMM) para estructuras jerárquicas. | `lme4`, `lmerTest`, `car` |
+| **04. Estadística Bayesiana** | Transición al paradigma bayesiano para modelos complejos: ANOVA bayesiano, GLMMs, interacción GxE y modelos de crecimiento no lineales. | `brms`, `tidybayes`, `bayesplot` |
+| **05. Machine Learning** | Modelos predictivos aplicados: Random Forest para espectroscopía, XGBoost para estrés abiótico y SVM para clasificación de enfermedades. | `tidymodels`, `xgboost`, `vip` |
+
+---
+
+## 🚀 Otros Módulos Incluidos
+
+- **04. Modelos No Lineales (GAMs):** Análisis de series temporales y curvas de respuesta dinámica mediante `mgcv` y `gratia`.
+- **06. Multivariado y Ómicas:** Análisis de comunidades (PERMANOVA/NMDS) y algoritmos para datos de alta dimensión (sPLS-DA) con `vegan` y `mixOmics`.
+- **Reportes Quarto:** Plantillas de alta calidad para la generación automática de informes técnicos y manuscritos científicos.
+
+---
+
+## 🛠️ Requisitos y Dependencias
+
+Para ejecutar estos scripts, se recomienda tener instalada la última versión de **R** y **RStudio**. Los paquetes principales se agrupan por funcionalidad:
+
+### 📦 Manipulación y Visualización
+- `tidyverse` (dplyr, ggplot2, tidyr, purrr)
+- `patchwork` (Combinación de gráficos)
+- `ggsci` & `viridis` (Paletas científicas)
+
+### 📊 Modelado Estadístico
+- **Base:** `lme4`, `lmerTest`, `mgcv`, `nlme`, `MASS`
+- **Post-hoc:** `emmeans`, `multcomp`, `multcompView`
+- **Diseño:** `agricolae`
+
+### 🕯️ Ecosistema Bayesiano
+- `brms` (Interfaz para Stan)
+- `tidybayes`, `bayesplot`, `bayestestR`
+
+### 🤖 Machine Learning
+- `tidymodels`, `xgboost`, `kernlab`, `vip`
+
+### 🧪 Diagnóstico (Imprescindible)
+- `performance` (Parte de `easystats`)
+- `DHARMa` (Residuos simulados)
+
+---
+
+## 📖 Cómo usar este repositorio
+1. Clona el repositorio: `git clone https://github.com/usuario/Scripts-estadistica-.git`
+2. Abre el archivo `.Rproj` para mantener las rutas relativas.
+3. Navega a la carpeta de interés y ejecuta los scripts `.R`. Los datos de ejemplo están embebidos o se generan proceduralmente para facilitar el aprendizaje.
+
+---
+**Desarrollado para el análisis de datos de alto impacto en Ciencias Agrarias.** 🌾🧪
