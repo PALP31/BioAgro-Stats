@@ -1,1 +1,35 @@
-.Rproj.user
+.Rproj.user/
+.Rhistory
+.Rapp.history
+.RData
+.RDataTmp
+.Ruserdata
+
+# R environments and local settings
+.Renviron
+.Rprofile
+renv/library/
+renv/staging/
+
+# Quarto and rendered caches
+.quarto/
+_freeze/
+*_cache/
+*_files/
+
+# Editor and temporary files
+*~
+*.swp
+*.swo
+*.tmp
+*.temp
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
+._*
