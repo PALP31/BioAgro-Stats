@@ -52,9 +52,12 @@ Para ejecutar estos scripts, se recomienda tener instalada la última versión d
 ---
 
 ## 📖 Cómo usar este repositorio
-1. Clona el repositorio: `git clone https://github.com/usuario/Scripts-estadistica-.git`
-2. Abre el archivo `.Rproj` para mantener las rutas relativas.
-3. Navega a la carpeta de interés y ejecuta los scripts `.R`. Los datos de ejemplo están embebidos o se generan proceduralmente para facilitar el aprendizaje.
+| Paso | Instrucción |
+| :---: | :--- |
+| 1️⃣ | Clona el repositorio: `git clone https://github.com/PALP31/BioAgro-Stats.git` |
+| 2️⃣ | Abre en **RStudio** el archivo `.Rproj` del proyecto para conservar rutas relativas y una sesión de trabajo reproducible. |
+| 3️⃣ | Navega a la carpeta del módulo que desees explorar y ejecuta los scripts `.R` según tu flujo de análisis. |
+| 4️⃣ | Usa los datos de ejemplo incluidos (o generados en los scripts) para practicar y adaptar los análisis a tus propios experimentos. |
 
 ---
 **Desarrollado para el análisis de datos de alto impacto en Ciencias Agrarias.** 🌾🧪
