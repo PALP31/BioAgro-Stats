@@ -29,7 +29,7 @@ _freeze/
 .DS_Store
 Thumbs.db
 Desktop.ini
-$RECYCLE.BIN/
+\$RECYCLE.BIN/
 .Spotlight-V100/
 .Trashes/
 ._*
