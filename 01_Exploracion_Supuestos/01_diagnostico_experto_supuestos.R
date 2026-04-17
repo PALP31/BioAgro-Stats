@@ -229,6 +229,7 @@ medias_mixto <- emmeans(mod_mixto, ~ tratamiento | genotipo)
 cat("\nComparación de tratamientos dentro de cada genotipo (EMMeans):\n")
 print(pairs(medias_mixto))
 
+
 cat("\n--- Módulo de Invernadero Finalizado ---\n")
 
 
