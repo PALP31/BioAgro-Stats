@@ -6,14 +6,26 @@
 # supuestos estadísticos en investigación agrícola, biotecnológica y de campo.
 # ============================================================================
 
-# Autoinstalación de paquetes faltantes
+# Verificación de paquetes requeridos
 paquetes_requeridos <- c(
   "tidyverse", "performance", "see", "car", "lmtest", 
   "patchwork", "DHARMa", "nortest", "corrplot", "fitdistrplus", "lme4",
   "lmerTest", "agricolae", "emmeans"
 )
-paquetes_nuevos <- paquetes_requeridos[!(paquetes_requeridos %in% installed.packages()[,"Package"])]
-if (length(paquetes_nuevos)) install.packages(paquetes_nuevos, dependencies = TRUE)
+paquetes_faltantes <- paquetes_requeridos[!(paquetes_requeridos %in% installed.packages()[, "Package"])]
+if (length(paquetes_faltantes)) {
+  stop(
+    paste0(
+      "Faltan paquetes requeridos para ejecutar este script: ",
+      paste(paquetes_faltantes, collapse = ", "),
+      ".\nInstálelos manualmente antes de continuar, por ejemplo con:\n",
+      "install.packages(c(",
+      paste(sprintf('"%s"', paquetes_faltantes), collapse = ", "),
+      "), dependencies = TRUE)"
+    ),
+    call. = FALSE
+  )
+}
 
 # Cargar librerías
 library(tidyverse)
