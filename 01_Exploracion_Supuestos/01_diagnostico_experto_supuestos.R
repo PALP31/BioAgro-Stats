@@ -140,7 +140,7 @@ cat("\n-> Pruebas de Homocedasticidad:\n")
 cat("Bartlett (Sensible a normalidad): p =", round(bartlett.test(biomasa ~ tratamiento, data = datos_inv)$p.value, 4), "\n")
 cat("Levene (Robusto): p =", round(leveneTest(biomasa ~ tratamiento, data = datos_inv)$"Pr(>F)"[1], 4), "\n")
 
-png("01_Exploracion_Supuestos/N2_diagnostico_lm_clasico.png", width=800, height=800, res=150)
+png(file.path(output_dir, "N2_diagnostico_lm_clasico.png"), width=800, height=800, res=150)
 par(mfrow = c(2,2))
 plot(modelo_lm_inv, main = "Diagnóstico Base LM")
 par(mfrow = c(1,1))
