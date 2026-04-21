@@ -32,13 +32,25 @@ library(MASS)        # Transformación Box-Cox
 library(lmtest)      # Autocorrelación (Durbin-Watson)
 library(patchwork)   # Diseños de gráficos
 
+# Directorio de trabajo normalizado para entradas/salidas robustas
+current_dir <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+output_dir <- if (basename(current_dir) == "01_Exploracion_Supuestos") {
+  current_dir
+} else {
+  file.path(current_dir, "01_Exploracion_Supuestos")
+}
+
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+
 # ============================================================================
 # 1. CARGA DE BASE DE DATOS REAL (BIOTECNOLOGÍA AGRÍCOLA)
 # ============================================================================
 cat("\n[1] LEYENDO BASE DE DATOS BIOTECNOLÓGICA...\n")
-archivo_csv <- "01_Exploracion_Supuestos/datos_biotec_agricola.csv"
+archivo_csv <- file.path(output_dir, "datos_biotec_agricola.csv")
 
-# Verificamos si existe (el script de python lo acaba de generar)
+# Verificamos si existe en el directorio esperado
 if(!file.exists(archivo_csv)) {
   stop("¡Falta el archivo CSV! Debe de estar en el directorio correspondiente.")
 }
@@ -58,7 +70,7 @@ cat("\n[NIVEL 1] MATRIZ DE EXPLORACIÓN (Ggally) OJO A LA COLINEALIDAD...\n")
 vars_numericas <- datos_biotec %>% 
   select(Biomasa_Gramos, Temperatura_Hoja, Tasa_Fotosintetica, Conductancia_Estomatica)
 
-png("01_Exploracion_Supuestos/P2_N1_Matriz_ggpairs.png", width=1200, height=1000, res=150)
+png(file.path(output_dir, "P2_N1_Matriz_ggpairs.png"), width=1200, height=1000, res=150)
 print(ggpairs(vars_numericas, 
         title = "Matriz de Exploración: Alerta de Colinealidad y Asimetría",
         lower = list(continuous = wrap("points", alpha=0.5, color="darkgreen")),
@@ -105,7 +117,7 @@ cat("\n[NIVEL 3] CAZA DE PUNTOS DE INFLUENCIA (OUTLIERS QUE DESTRUYEN EL MODELO)
 # Un punto de Leverage con Y extremo se vuelve una "Observación Influyente" e inclina la recta.
 # La Distancia de Cook los descubre.
 
-png("01_Exploracion_Supuestos/P2_N3_InfluencePlot.png", width=1000, height=800, res=150)
+png(file.path(output_dir, "P2_N3_InfluencePlot.png"), width=1000, height=800, res=150)
 influencePlot(modelo_estable, 
               main="Gráfico de Influencia: Leverage (X) vs Residuals (Y)",
               sub="Círculos grandes = Alta Distancia de Cook (Destructivos)")
@@ -114,7 +126,7 @@ cat("- Gráfico de Influencia guardado en 'P2_N3_InfluencePlot.png'.\n")
 
 # Extrayendo la distancia de Cook para buscar los problemáticos
 cooks_d <- cooks.distance(modelo_estable)
-indices_problematicos <- as.numeric(names(cooks_d)[cooks_d > (4/nrow(datos_biotec))])
+indices_problematicos <- which(cooks_d > (4 / nrow(datos_biotec)))
 
 cat("\n-> Plantas detectadas como altamente influyentes (Distancia de Cook crítica):\n")
 print(datos_biotec[indices_problematicos, c("ID_Planta", "Variedad", "Biomasa_Gramos")])
@@ -139,7 +151,7 @@ if(shapiro_limpio$p.value < 0.05) {
 }
 
 # Ejecutando Box-Cox para hallar el Lambda óptimo
-png("01_Exploracion_Supuestos/P2_N4_BoxCox.png", width=800, height=600, res=150)
+png(file.path(output_dir, "P2_N4_BoxCox.png"), width=800, height=600, res=150)
 boxcox_res <- boxcox(modelo_limpio, plotit = TRUE, lambda = seq(-2, 2, by = 0.1))
 title("Log-Likelihood para el parámetro Lambda (Box-Cox)")
 dev.off()
@@ -165,7 +177,7 @@ p_limpio <- plot(check_normality(modelo_limpio)) + ggtitle("2. Sin Outliers (Asi
 p_curado <- plot(check_normality(modelo_curado)) + ggtitle("3. Curado (Box-Cox)") 
 
 # Combinar con patchwork
-png("01_Exploracion_Supuestos/P2_N4_Antes_Despues_Norm.png", width=1400, height=500, res=150)
+png(file.path(output_dir, "P2_N4_Antes_Despues_Norm.png"), width=1400, height=500, res=150)
 print(p_antes | p_limpio | p_curado)
 dev.off()
 
