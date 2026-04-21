@@ -27,10 +27,6 @@ if (length(paquetes_faltantes)) {
   )
 }
 
-# Directorio único de salida para figuras y archivos generados
-output_dir <- "01_Exploracion_Supuestos"
-dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-
 # Cargar librerías
 library(tidyverse)
 library(performance) # Diagnósticos modernos y visuales
@@ -153,16 +149,14 @@ cat("- Gráficos Nivel 2 guardados.\n")
 cat("\n[NIVEL 3] ANÁLISIS DE PERFORMANCE Y FITDISTRPLUS\n")
 
 cat("-> Evaluando Cullen & Frey para 'Lesiones en Hoja'\n")
-png("01_Exploracion_Supuestos/N3_CullenFrey_Conteo.png", width=800, height=600, res=150)
+png(file.path(output_dir, "N3_CullenFrey_Conteo.png"), width=800, height=600, res=150)
 fitdistrplus::descdist(datos_campo$lesiones_hoja, discrete = TRUE, boot = 500)
 dev.off()
 
-reporte_modelo <- performance::check_model(modelo_lm_inv, panel = FALSE)
-panel_easystats <- reporte_modelo[[1]] + reporte_modelo[[2]] + 
-                   reporte_modelo[[3]] + reporte_modelo[[4]] +
-                   plot_layout(ncol = 2)
-
-ggsave(file.path(output_dir, "N3_Performance_Easystats.png"), panel_easystats, width = 12, height = 10, dpi = 300)
+reporte_modelo <- performance::check_model(modelo_lm_inv)
+png(file.path(output_dir, "N3_Performance_Easystats.png"), width=1200, height=1000, res=150)
+plot(reporte_modelo)
+dev.off()
 cat("- Panel avanzado Easystats guardado exitosamente.\n")
 
 # ============================================================================
@@ -179,7 +173,7 @@ cat("\n-> Evaluando Inflación de Ceros (Easystats):\n")
 print(check_zeroinflation(modelo_glm_poisson))
 
 residuos_dharma <- simulateResiduals(fittedModel = modelo_glm_poisson, plot = FALSE)
-png("01_Exploracion_Supuestos/N4_DHARMa_Validacion.png", width=1000, height=500, res=150)
+png(file.path(output_dir, "N4_DHARMa_Validacion.png"), width=1000, height=500, res=150)
 plot(residuos_dharma)
 dev.off()
 
