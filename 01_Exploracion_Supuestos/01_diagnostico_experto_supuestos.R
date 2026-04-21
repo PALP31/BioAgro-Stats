@@ -27,6 +27,10 @@ if (length(paquetes_faltantes)) {
   )
 }
 
+# Directorio único de salida para figuras y archivos generados
+output_dir <- "01_Exploracion_Supuestos"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
 # Cargar librerías
 library(tidyverse)
 library(performance) # Diagnósticos modernos y visuales
