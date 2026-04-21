@@ -199,3 +199,60 @@ cat("deberás transitar hacia distribuciones Binomial Negativa (MASS::glm.nb),\n
 cat("o Modelos Inflados con Ceros (Zero-Inflated / Hurdle usando glmmTMB o pscl).\n")
 cat("La validación de supuestos es el corazón de la estadística aplicada al agro.\n")
 cat("============================================================================\n")
+
+# ============================================================================
+# NIVEL 5: SUPER AVANZADO - DISEÑO EXPERIMENTAL EN INVERNADERO (LMM)
+# ============================================================================
+cat("\n[NIVEL 5] MÓDULO DE INVERNADERO (LME4 Y AGRICOLAE)...\n")
+
+# Para este análisis debes instalar lmerTest, agricolae, emmeans
+if (!require(lmerTest)) install.packages("lmerTest")
+if (!require(agricolae)) install.packages("agricolae")
+if (!require(emmeans)) install.packages("emmeans")
+
+library(lme4)
+library(lmerTest)
+library(agricolae)
+library(emmeans)
+
+# Simulación de ensayo de Invernadero (Medidas Repetidas o Bloques)
+# 7 Genotipos, 2 Tratamientos (Control vs Calor), 3 Bloques (Mesones del invernadero)
+datos_invernadero <- expand.grid(
+  genotipo = paste0("G", 1:7),
+  tratamiento = c("Control", "Calor"),
+  bloque = as.factor(1:3) # Mesón 1, 2 y 3
+) %>%
+  mutate(
+    # Efecto aleatorio del bloque (ej. el mesón 3 es más caluroso)
+    efecto_bloque = case_when(bloque == "1" ~ -2, bloque == "2" ~ 0, bloque == "3" ~ 3),
+    # Rendimiento simulado
+    rendimiento = 50 - (ifelse(tratamiento == "Calor", 15, 0)) + efecto_bloque + rnorm(n(), 0, 2)
+  )
+
+# ----------------------------------------------------------------------------
+# Enfoque A: DBCA Clásico (Bloques Fijos)
+# ----------------------------------------------------------------------------
+cat("\n--- Enfoque A: DBCA (ANOVA Clásico) ---\n")
+mod_dbca <- lm(rendimiento ~ genotipo * tratamiento + bloque, data = datos_invernadero)
+print(anova(mod_dbca))
+
+# Post-Hoc con Agricolae (Test de Tukey clásico en agronomía)
+tukey_dbca <- HSD.test(mod_dbca, trt = c("genotipo", "tratamiento"), console = FALSE)
+cat("\nGrupos de significancia (Agricolae):\n")
+print(head(tukey_dbca$groups))
+
+# ----------------------------------------------------------------------------
+# Enfoque B: Modelo Lineal Mixto (LMM con lme4)
+# ----------------------------------------------------------------------------
+cat("\n--- Enfoque B: Modelo Mixto (Efectos Aleatorios) ---\n")
+# '(1 | bloque)' le dice al modelo: "permite que cada bloque tenga su propio intercepto"
+mod_mixto <- lmer(rendimiento ~ genotipo * tratamiento + (1 | bloque), data = datos_invernadero)
+
+print(summary(mod_mixto))
+
+# Medias Marginales Estimadas (EMMeans) - El estándar moderno para LMM
+medias_mixto <- emmeans(mod_mixto, ~ tratamiento | genotipo)
+cat("\nComparación de tratamientos dentro de cada genotipo (EMMeans):\n")
+print(pairs(medias_mixto))
+
+cat("\n--- Módulo de Invernadero Finalizado con Éxito ---\n")
