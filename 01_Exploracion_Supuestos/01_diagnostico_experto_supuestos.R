@@ -106,7 +106,7 @@ matriz_corr <- cor(vars_num_lab)
 cat("-> Matriz de Correlación (Laboratorio):\n")
 print(matriz_corr)
 
-png("01_Exploracion_Supuestos/N1_correlaciones_lab.png", width=800, height=800, res=150)
+png(file.path(output_dir, "N1_correlaciones_lab.png"), width=800, height=800, res=150)
 corrplot(matriz_corr, method = "color", type = "upper", addCoef.col = "black",
          tl.col = "darkblue", tl.srt = 45, diag = FALSE,
          title = "Correlación Traits Biotecnológicos", mar=c(0,0,2,0))
@@ -120,7 +120,7 @@ p_box <- ggplot(datos_lab, aes(x = genotipo, y = act_enzimatica, fill = genotipo
   geom_boxplot(outlier.colour = "red", outlier.size = 3) +
   theme_minimal() + labs(title = "Detección de Outliers (Puntos Rojos)")
 
-ggsave("01_Exploracion_Supuestos/N1_exploracion_visual.png", plot = (p_hist / p_box), width = 8, height = 7, dpi = 300)
+ggsave(file.path(output_dir, "N1_exploracion_visual.png"), plot = (p_hist / p_box), width = 8, height = 7, dpi = 300)
 cat("- Gráficos Nivel 1 guardados exitosamente.\n")
 
 # ============================================================================
