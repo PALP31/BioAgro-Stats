@@ -6,12 +6,23 @@
 # Influencia (Cook), Autocorrelación y Transformaciones de Box-Cox.
 # ============================================================================
 
-# Autoinstalación de paquetes específicos para este análisis
+# Verificación de paquetes específicos para este análisis
 paquetes_requeridos <- c(
   "tidyverse", "car", "GGally", "performance", "MASS", "lmtest", "patchwork"
 )
-paquetes_nuevos <- paquetes_requeridos[!(paquetes_requeridos %in% installed.packages()[,"Package"])]
-if (length(paquetes_nuevos)) install.packages(paquetes_nuevos, dependencies = TRUE)
+paquetes_faltantes <- paquetes_requeridos[!(paquetes_requeridos %in% installed.packages()[, "Package"])]
+if (length(paquetes_faltantes) > 0) {
+  stop(
+    paste0(
+      "Faltan paquetes requeridos para ejecutar este script: ",
+      paste(paquetes_faltantes, collapse = ", "),
+      ".\nInstálalos manualmente antes de continuar con:\n",
+      "install.packages(c(",
+      paste(sprintf('"%s"', paquetes_faltantes), collapse = ", "),
+      "), dependencies = TRUE)"
+    )
+  )
+}
 
 library(tidyverse)
 library(car)         # VIF, InfluencePlot
