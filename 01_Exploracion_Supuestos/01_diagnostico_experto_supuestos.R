@@ -162,7 +162,7 @@ panel_easystats <- reporte_modelo[[1]] + reporte_modelo[[2]] +
                    reporte_modelo[[3]] + reporte_modelo[[4]] +
                    plot_layout(ncol = 2)
 
-ggsave("01_Exploracion_Supuestos/N3_Performance_Easystats.png", panel_easystats, width = 12, height = 10, dpi = 300)
+ggsave(file.path(output_dir, "N3_Performance_Easystats.png"), panel_easystats, width = 12, height = 10, dpi = 300)
 cat("- Panel avanzado Easystats guardado exitosamente.\n")
 
 # ============================================================================
