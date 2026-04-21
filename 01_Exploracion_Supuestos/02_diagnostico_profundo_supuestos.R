@@ -32,12 +32,14 @@ library(MASS)        # Transformación Box-Cox
 library(lmtest)      # Autocorrelación (Durbin-Watson)
 library(patchwork)   # Diseños de gráficos
 
+EXPLORATION_DIR <- "01_Exploracion_Supuestos"
+
 # Directorio de trabajo normalizado para entradas/salidas robustas
-current_dir <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
-output_dir <- if (basename(current_dir) == "01_Exploracion_Supuestos") {
+current_dir <- normalizePath(getwd(), winslash = "/")
+output_dir <- if (basename(current_dir) == EXPLORATION_DIR) {
   current_dir
 } else {
-  file.path(current_dir, "01_Exploracion_Supuestos")
+  file.path(current_dir, EXPLORATION_DIR)
 }
 
 if (!dir.exists(output_dir)) {
