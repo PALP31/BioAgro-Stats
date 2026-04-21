@@ -52,7 +52,7 @@ archivo_csv <- file.path(output_dir, "datos_biotec_agricola.csv")
 
 # Verificamos si existe en el directorio esperado
 if(!file.exists(archivo_csv)) {
-  stop("¡Falta el archivo CSV! Debe de estar en el directorio correspondiente.")
+  stop(paste0("¡Falta el archivo CSV! Ruta esperada: ", archivo_csv))
 }
 
 datos_biotec <- read.csv(archivo_csv)
