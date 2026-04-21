@@ -8,7 +8,7 @@
 
 # Verificación de paquetes requeridos
 paquetes_requeridos <- c(
-  "tidyverse", "performance", "see", "car", "lmtest", 
+  "tidyverse", "performance", "see", "car",
   "patchwork", "DHARMa", "nortest", "corrplot", "fitdistrplus", "lme4",
   "lmerTest", "agricolae", "emmeans"
 )
@@ -32,7 +32,6 @@ library(tidyverse)
 library(performance) # Diagnósticos modernos y visuales
 library(see)         # Visualización de ecosistema easystats
 library(car)         # Pruebas clásicas de supuestos
-library(lmtest)      # Pruebas heterocedasticidad y autocorrelación
 library(patchwork)   # Combinación de gráficos complejos
 library(DHARMa)      # Diagnóstico avanzado de residuos simulados
 library(nortest)     # Evaluación exhaustiva de normalidad
