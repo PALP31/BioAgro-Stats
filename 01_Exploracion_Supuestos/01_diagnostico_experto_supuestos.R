@@ -134,8 +134,8 @@ fitdistrplus::descdist(datos_campo$lesiones_hoja, discrete = TRUE, boot = 500)
 dev.off()
 
 reporte_modelo <- performance::check_model(modelo_lm_inv, panel = FALSE)
-panel_easystats <- plot(reporte_modelo[[1]]) + plot(reporte_modelo[[2]]) + 
-                   plot(reporte_modelo[[3]]) + plot(reporte_modelo[[4]]) +
+panel_easystats <- reporte_modelo[[1]] + reporte_modelo[[2]] + 
+                   reporte_modelo[[3]] + reporte_modelo[[4]] +
                    plot_layout(ncol = 2)
 
 ggsave("01_Exploracion_Supuestos/N3_Performance_Easystats.png", panel_easystats, width = 12, height = 10, dpi = 300)
