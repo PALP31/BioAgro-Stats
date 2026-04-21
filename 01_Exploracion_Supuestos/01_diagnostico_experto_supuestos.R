@@ -45,9 +45,18 @@ library(emmeans)     # Medias marginales estimadas
 
 set.seed(42) # Reproducibilidad científica
 
-# Creación de directorio si no existe (para guardar los gráficos)
-if(!dir.exists("01_Exploracion_Supuestos")) {
-  dir.create("01_Exploracion_Supuestos")
+# Creación de directorio de salida si no existe (para guardar los gráficos)
+# Evita duplicar "01_Exploracion_Supuestos" cuando el script se ejecuta
+# con el working directory ya situado dentro de esa carpeta.
+current_dir <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+output_dir <- if (basename(current_dir) == "01_Exploracion_Supuestos") {
+  current_dir
+} else {
+  file.path(current_dir, "01_Exploracion_Supuestos")
+}
+
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
 }
 
 # ============================================================================
