@@ -1,0 +1,640 @@
+---
+title: "Taller 4: Arreglos Factoriales en DCA y DBCA"
+subtitle: "Aplicaciones Estadísticas en Agronomía"
+author: "Curso de Diseño Experimental"
+date: today
+lang: es
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+    number-sections: true
+    code-fold: false
+    code-tools: true
+    code-copy: true
+    highlight-style: github
+    embed-resources: true
+    fig-width: 9
+    fig-height: 6
+    fig-align: center
+execute:
+  echo: true
+  warning: false
+  message: false
+engine: knitr
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  comment = ""
+)
+```
+
+---
+
+# Objetivos de Aprendizaje
+
+Al finalizar este taller el estudiante será capaz de:
+
+1.  Comprender qué es un **Arreglo Factorial** y cuándo es estadísticamente necesario utilizarlo en la investigación agropecuaria.
+2.  Diferenciar con precisión entre un **Arreglo Factorial en DCA** y un **Arreglo Factorial en DBCA**.
+3.  Escribir y explicar los componentes del **Modelo Aditivo Lineal** y la descomposición de sus **Grados de Libertad**.
+4.  Identificar la **Unidad Experimental** y esbozar un **Croquis de Distribución de Campo** para arreglos factoriales.
+5.  Ajustar modelos factoriales con interacción en R y validar rigurosamente los supuestos del error (normalidad y homocedasticidad por interacción).
+6.  Interpretar la tabla ANOVA jerárquicamente, priorizando el término de la **Interacción**.
+7.  Ejecutar comparaciones múltiples de Tukey para combinaciones de factores y generar representaciones gráficas de calidad editorial.
+8.  Importar datos reales desde hojas de cálculo de **Excel** e implementar análisis completos de forma autónoma.
+
+::: {.callout-tip}
+## 🚀 Compatibilidad con Google Colab y Ejecución en la Nube
+Este taller es 100% compatible con **Google Colab** y se puede ejecutar directamente en tu navegador sin necesidad de instalar nada localmente.
+
+Para abrir este taller en Google Colab:
+1. Haz clic en el siguiente botón para iniciar el cuaderno en la nube:  
+   [![Abrir en Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PALP31/BioAgro-Stats/blob/main/01_Exploracion_Supuestos/Taller4_Factorial.ipynb)
+2. Una vez en Colab, asegúrate de que el entorno esté configurado con el **Kernel de R** (verás el logo de R en la esquina superior derecha).
+3. La primera celda de código configurará el entorno e instalará todas las librerías necesarias de forma silenciosa.
+:::
+
+---
+
+# Fundamentos Teóricos de los Diseños Factoriales
+
+## ¿Qué es un Arreglo Factorial y cuándo se debe usar?
+
+En la investigación agronómica moderna, evaluar un solo factor a la vez (como estudiar diferentes dosis de nitrógeno por separado y diferentes variedades de trigo por otro) resulta ineficiente y, en ocasiones, metodológicamente incorrecto. Un **Arreglo Factorial** no es un diseño de aleatorización o bloqueo en sí mismo, sino una estructura de **tratamientos**. Consiste en combinar todos los niveles de dos o más factores independientes en un solo experimento, permitiendo evaluarlos de manera simultánea.
+
+Se debe utilizar un arreglo factorial cuando queremos responder simultáneamente:
+1.  **Efectos Principales:** ¿Cuál es el impacto aislado del Factor A (ej. Variedad) y el Factor B (ej. Riego) sobre la variable de respuesta (ej. Rendimiento)?
+2.  **Efecto de Interacción (A $\times$ B):** ¿El comportamiento de los niveles del Factor A varía de forma significativa según los niveles del Factor B? (Sinergismo o Antagonismo). Si el efecto de un factor cambia según el nivel del otro, se dice que existe **Interacción**.
+
+---
+
+## Diferencia Crítica: Arreglo Factorial en DCA vs. DBCA
+
+*   **Factorial en DCA (Diseño Completamente al Azar):**
+    Se utiliza cuando las unidades experimentales (ej. macetas en un invernadero climatizado, bandejas homogéneas) son uniformes. Las combinaciones de los tratamientos ($a \times b$) se asignan enteramente al azar a las unidades experimentales.
+    *   **Modelo Aditivo Lineal (DCA Factorial):**
+        $$Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \varepsilon_{ijk}$$
+        Donde:
+        *   $\mu$: Media general del experimento.
+        *   $\alpha_i$: Efecto principal del Factor A (nivel $i$, $i = 1, \dots, a$).
+        *   $\beta_j$: Efecto principal del Factor B (nivel $j$, $j = 1, \dots, b$).
+        *   $(\alpha\beta)_{ij}$: Efecto de la Interacción entre el nivel $i$ de A y el nivel $j$ de B.
+        *   $\varepsilon_{ijk}$: Error experimental residual $\varepsilon_{ijk} \sim N(0, \sigma^2)$ independientes.
+
+*   **Factorial en DBCA (Diseño de Bloques Completos al Azar):**
+    Se utiliza cuando las unidades de campo presentan variabilidad sistemática en una dirección espacial o temporal (ej. gradiente de humedad, pendiente, sombra). Dividimos el terreno en $r$ bloques homogéneos. Cada bloque debe ser lo suficientemente grande para albergar **todas las combinaciones de tratamientos** (completitud). La aleatorización de las combinaciones se realiza de forma independiente *dentro* de cada bloque.
+    *   **Modelo Aditivo Lineal (DBCA Factorial):**
+        $$Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \gamma_k + \varepsilon_{ijk}$$
+        Donde se añade:
+        *   $\gamma_k$: Efecto del Bloque $k$ ($k = 1, \dots, r$). Se asume aditividad, es decir, que no existe interacción entre los bloques y los tratamientos combinados.
+
+---
+
+## La Pérdida de Grados de Libertad: El "Costo" del Bloqueo en Diseños Factoriales
+
+El bloqueo en arreglos factoriales, al igual que en los diseños simples, extrae variabilidad sistemática del error experimental, pero a cambio **consume grados de libertad**. Veamos la distribución teórica de los Grados de Libertad para dos factores con $a$ y $b$ niveles y $r$ repeticiones/bloques:
+
+| Fuente de Variación | Factorial en DCA (GL) | Factorial en DBCA (GL) | Ejemplo Numérico ($a=2, b=2, r=3$) |
+|:---|:---|:---|:---|
+| **Factor A** | $a - 1$ | $a - 1$ | $2 - 1 = 1$ |
+| **Factor B** | $b - 1$ | $b - 1$ | $2 - 1 = 1$ |
+| **Interacción (A $\times$ B)** | $(a - 1)(b - 1)$ | $(a - 1)(b - 1)$ | $(1)(1) = 1$ |
+| **Bloques (r)** | — | $r - 1$ | $3 - 1 = 2$ (Solo en DBCA) |
+| **Error Residual** | $ab(r - 1)$ | $(ab - 1)(r - 1)$ | DCA: $8$ GL vs. DBCA: $6$ GL |
+| **Total** | $abr - 1$ | $abr - 1$ | $12 - 1 = 11$ |
+
+: Distribución de Grados de Libertad: DCA vs DBCA Factorial {#tbl-gl-factorial}
+
+::: {.callout-important}
+### El Costo Estadístico del Bloqueo Innecesario
+Si bloqueamos un terreno que en realidad es homogéneo (sin gradiente real), habremos restado $r - 1$ grados de libertad al error sin reducir la Suma de Cuadrados del Error ($SC_{Error}$). Esto provoca un incremento artificial del Cuadrado Medio del Error ($CM_{Error} = SC_{Error}/GL_{Error}$), lo cual reduce de forma severa la potencia estadística del ANOVA para detectar efectos principales o interacciones significativas. **Bloquee únicamente cuando exista variabilidad sistemática comprobable.**
+:::
+
+---
+
+## Identificación de la Unidad Experimental
+
+En diseño experimental, la **Unidad Experimental** es la fracción mínima de material experimental a la que se le aplica de forma independiente y aleatoria un tratamiento.
+*   **En nuestro ensayo principal:** Evaluamos la producción de variedades de maíz bajo diferentes riegos en invernaderos (Bloques). La unidad experimental **NO** es la planta individual de maíz. Es **la parcela/cama de cultivo individual** dentro de un invernadero específico que recibe una combinación dada de variedad de semilla y frecuencia de riego. Las mediciones de rendimiento se toman por parcela y luego se reportan en toneladas por hectárea ($t/ha$).
+
+---
+
+## Esquema de un Arreglo Factorial $2 \times 2$ en DBCA (Croquis de Campo)
+
+Consideremos un ensayo agrícola con **2 Variedades de Maíz** ($V_1$, $V_2$) y **2 Frecuencias de Riego** ($R_1$: Goteo, $R_2$: Aspersión) sobre un terreno con una pendiente (gradiente de fertilidad de arriba a abajo).
+
+Tenemos $2 \times 2 = 4$ Tratamientos combinados:
+
+*   **T1:** $V_1R_1$ (Variedad 1 con Goteo)
+*   **T2:** $V_1R_2$ (Variedad 1 con Aspersión)
+*   **T3:** $V_2R_1$ (Variedad 2 con Goteo)
+*   **T4:** $V_2R_2$ (Variedad 2 con Aspersión)
+
+Establecemos **3 Bloques** perpendiculares al gradiente. Cada bloque contiene las 4 combinaciones distribuidas enteramente al azar:
+
+```
+                    [ DIRECCIÓN DE LA PENDIENTE: ZONA ALTA / SECA ]
+Norte  ========================================================================
+       BLOQUE 1 (Zona Alta - Suelo menos profundo)
+       +-------------------+-------------------+-------------------+-------------------+
+       |    V1R2 (T2)      |    V2R1 (T3)      |    V1R1 (T1)      |    V2R2 (T4)      |  <- Aleatorio
+       +-------------------+-------------------+-------------------+-------------------+
+       ========================================================================
+       BLOQUE 2 (Zona Media)
+       +-------------------+-------------------+-------------------+-------------------+
+       |    V2R1 (T3)      |    V1R1 (T1)      |    V2R2 (T4)      |    V1R2 (T2)      |  <- Aleatorio
+       +-------------------+-------------------+-------------------+-------------------+
+       ========================================================================
+       BLOQUE 3 (Zona Baja - Suelo más profundo y húmedo)
+       +-------------------+-------------------+-------------------+-------------------+
+       |    V1R1 (T1)      |    V2R2 (T4)      |    V1R2 (T2)      |    V2R1 (T3)      |  <- Aleatorio
+       +-------------------+-------------------+-------------------+-------------------+
+Sur    ========================================================================
+                    [ DIRECCIÓN DE LA PENDIENTE: ZONA BAJA / HÚMEDA ]
+```
+
+*   **Nota de Aleatorización:** Las 4 combinaciones aparecen exactamente una vez dentro de cada bloque, pero su distribución espacial es aleatoria y única por bloque, lo cual controla el gradiente sistemático.
+
+---
+
+# Configuración del Entorno de R
+
+Instalaremos y cargaremos la suite de paquetes indispensables para realizar el análisis.
+
+```{r librerias}
+# Evitar diálogos interactivos de selección de espejo CRAN
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Instalación y carga silenciosa de paquetes estadísticos
+preparar_entorno <- function(paquetes) {
+  for (p in paquetes) {
+    if (!require(p, character.only = TRUE)) {
+      message(paste("Instalando paquete:", p, "..."))
+      install.packages(p, dependencies = TRUE, quiet = TRUE)
+      library(p, character.only = TRUE)
+    }
+  }
+  message("¡Entorno de R configurado con éxito!")
+}
+
+paquetes_requeridos <- c("ggplot2", "performance", "see", "agricolae", "DescTools", "readxl")
+suppressMessages(preparar_entorno(paquetes_requeridos))
+```
+
+---
+
+# Importación de Datos de Excel y Estructuración en R
+
+## Carga de Datos desde Hojas de Cálculo (.xlsx)
+
+En el ámbito profesional y académico, los datos crudos se registran usualmente en Microsoft Excel. En R, empleamos el paquete `readxl` y su función `read_excel()` para importar las hojas de datos directamente.
+
+## La Conversión Mandatoria a Factores en Diseños Factoriales
+
+```{r importacion}
+# Nombre del archivo de datos Excel
+excel_file <- "datos_taller4_factorial.xlsx"
+
+# Descargar desde GitHub si no existe (ej. en Google Colab o entorno sin archivos locales)
+if (!file.exists(excel_file)) {
+  message("Descargando datos_taller4_factorial.xlsx desde GitHub...")
+  url_git <- "https://raw.githubusercontent.com/PALP31/BioAgro-Stats/main/01_Exploracion_Supuestos/datos_taller4_factorial.xlsx"
+  tryCatch({
+    download.file(url_git, destfile = excel_file, mode = "wb", quiet = TRUE)
+    message("¡Archivo descargado exitosamente!")
+  }, error = function(e) {
+    message("⚠️ Error en descarga. Cargando datos de forma programática...")
+  })
+}
+
+# Carga de datos
+if (file.exists(excel_file)) {
+  datos_fact <- read_excel(excel_file)
+} else {
+  # Fallback programático idéntico en caso de fallo de red
+  datos_fact <- data.frame(
+    Variedad = c("V1", "V1", "V2", "V2", "V1", "V1", "V2", "V2", "V1", "V1", "V2", "V2"),
+    Riego = c("Goteo", "Aspersion", "Goteo", "Aspersion", "Goteo", "Aspersion", "Goteo", "Aspersion", "Goteo", "Aspersion", "Goteo", "Aspersion"),
+    Bloque = c("Inv_1", "Inv_1", "Inv_1", "Inv_1", "Inv_2", "Inv_2", "Inv_2", "Inv_2", "Inv_3", "Inv_3", "Inv_3", "Inv_3"),
+    Produccion = c(15, 10, 18, 12, 16, 11, 20, 13, 14, 9, 17, 11)
+  )
+  message("✅ Base de datos cargada vía fallback programático.")
+}
+
+# Conversión mandatoria a factores categóricos (vital para el ANOVA en R)
+datos_fact$Variedad <- as.factor(datos_fact$Variedad)
+datos_fact$Riego    <- as.factor(datos_fact$Riego)
+datos_fact$Bloque   <- as.factor(datos_fact$Bloque)
+
+# Visualización de la estructura y primeros datos
+cat("📊 ESTRUCTURA DE LA BASE DE DATOS:\n")
+str(datos_fact)
+
+cat("\n📋 PRIMERAS OBSERVACIONES:\n")
+head(datos_fact)
+```
+
+---
+
+# Gráficos Exploratorios y Perfiles de Interacción
+
+Antes de ajustar el ANOVA, realizamos una exploración visual para comprender la naturaleza de los datos. La herramienta clave en los diseños factoriales es el **Gráfico de Interacción (Perfiles de Medias)**:
+*   Si las líneas que conectan las respuestas promedio de los niveles de un factor a través de los niveles del otro son **paralelas**, indica que los factores actúan de forma **aditiva independiente** (no hay interacción significativa).
+*   Si las líneas **se cruzan o muestran pendientes opuestas**, es un claro indicio visual de que existe una **Interacción significativa** (el efecto del riego depende de la variedad utilizada).
+
+```{r perfiles}
+# Gráfico de perfil nativo en R
+interaction.plot(
+  x.factor = datos_fact$Riego,
+  trace.factor = datos_fact$Variedad,
+  response = datos_fact$Produccion,
+  type = "b",
+  pch = c(19, 17),
+  col = c("#2E86AB", "#E84855"),
+  xlab = "Método de Riego",
+  ylab = "Producción Promedio (t/ha)",
+  legend = TRUE,
+  main = "Gráfico de Perfil: Interacción Riego * Variedad"
+)
+```
+
+---
+
+# Ajuste del Modelo e Interpretación del ANOVA
+
+## La Especificación de la Interacción en R
+
+En R, el operador **`*`** representa la inclusión de los efectos principales y su interacción:
+`Variedad * Riego` equivale a escribir: `Variedad + Riego + Variedad:Riego` (donde `:` representa la interacción pura).
+Como nuestro diseño se aleatorizó en bloques completos al azar, agregamos el factor de control ambiental mediante `+ Bloque`. El modelo queda:
+`Produccion ~ Variedad * Riego + Bloque`
+
+## Jerarquía de la Interpretación en Diseños Factoriales
+
+**Regla de Oro:** Siempre evaluamos primero la significancia del término de la **Interacción (Variedad:Riego)**:
+1.  **Si la Interacción es Significativa ($p < 0.05$):** Concluimos que el efecto del Riego cambia según la Variedad. **No** debemos interpretar los efectos principales de forma aislada, ya que estaríamos dando conclusiones incompletas o erróneas. El análisis post-hoc de Tukey debe realizarse sobre las combinaciones de tratamientos.
+2.  **Si la Interacción NO es Significativa ($p \ge 0.05$):** Los factores son independientes. Procedemos a interpretar los efectos principales (Variedad y Riego por separado) como si fueran experimentos independientes.
+
+```{r anova}
+# Ajuste del modelo lineal con interacción y bloques
+modelo_fact <- aov(Produccion ~ Variedad * Riego + Bloque, data = datos_fact)
+
+# Visualización de la tabla del Análisis de Varianza (ANOVA)
+cat("📊 TABLA ANOVA FACTORIAL EN DBCA:\n")
+summary(modelo_fact)
+```
+
+---
+
+# Validación de los Supuestos del Modelo (Residuos)
+
+Antes de validar diferencias de medias, debemos comprobar que los residuos cumplan con los supuestos matemáticos de la inferencia lineal:
+
+1.  **Normalidad (Shapiro-Wilk):** Evaluamos si los residuos provienen de una distribución normal ($H_0$: Residuos normales).
+2.  **Homocedasticidad (Prueba de Levene):** En arreglos factoriales, el supuesto de homogeneidad de varianzas se verifica sobre los **tratamientos combinados** (la interacción de los factores), no sobre cada factor por separado. Usamos la función `LeveneTest` de `DescTools`.
+
+## Diagnóstico Gráfico Automatizado con `performance`
+
+```{r performance-check}
+# Diagnóstico gráfico de residuos con see y performance
+check_model(modelo_fact, check = c("normality", "homogeneity"))
+```
+
+## Prueba Formal de Normalidad (Shapiro-Wilk)
+
+```{r shapiro-test}
+# Extraemos los residuos del modelo
+residuos_f <- residuals(modelo_fact)
+
+# Prueba formal de normalidad
+shapiro.test(residuos_f)
+```
+
+## Prueba Formal de Homocedasticidad (Levene por Interacción)
+
+```{r levene-test}
+# Creamos la interacción de tratamientos para Levene
+datos_fact$Tratamiento_Combinado <- interaction(datos_fact$Variedad, datos_fact$Riego)
+
+# Prueba formal de Levene sobre las combinaciones
+LeveneTest(Produccion ~ Tratamiento_Combinado, data = datos_fact)
+```
+
+---
+
+# Pruebas de Comparaciones Múltiples de Medias (Post-Hoc)
+
+Si la interacción `Variedad:Riego` es significativa, realizamos la comparación múltiple para evaluar la combinación de niveles mediante la prueba de **Tukey HSD**.
+
+Utilizando el paquete `agricolae`, especificamos un vector con los dos factores en el argumento correspondiente: `c("Variedad", "Riego")`. Esto generará un análisis de agrupamiento para las combinaciones de tratamientos evaluando cuál combinación maximiza la respuesta.
+
+```{r tukey-hsd}
+# Comparación múltiple de medias con Tukey HSD para la Interacción
+tukey_fact <- HSD.test(modelo_fact, c("Variedad", "Riego"), group = TRUE, console = TRUE)
+```
+
+---
+
+# Visualización Avanzada de Comparaciones de Medias y Letras
+
+La comunicación visual científica del arreglo factorial exige mostrar las medias y sus barras de error estándar para cada una de las 4 combinaciones, acompañadas por las letras de Tukey correspondientes.
+
+## Gráfica Básica (Nativa)
+
+Utilizando el método `plot()` provisto por la librería `agricolae`.
+
+```{r plot-nativo}
+# Gráfica rápida nativa de agricolae
+plot(tukey_fact, variation = 'SE', col = 'skyblue', main = 'Tukey HSD: Combinación Variedad * Riego')
+```
+
+## Gráfica Premium (ggplot2)
+
+Creando un gráfico de barras de alta calidad editorial con barras de error estándar de la media (EEM) y letras de Tukey.
+
+```{r plot-ggplot}
+# Construcción del dataframe para ggplot
+df_tukey_f <- data.frame(
+  Tratamiento = rownames(tukey_fact$means),
+  Media = tukey_fact$means$Produccion,
+  SD = tukey_fact$means$std,
+  Rep = tukey_fact$means$r
+)
+
+# Cálculo de las barras de error (Error Estándar de la Media - EEM)
+df_tukey_f$EEM <- df_tukey_f$SD / sqrt(df_tukey_f$Rep)
+df_tukey_f$Grupo <- tukey_fact$groups[rownames(df_tukey_f), 'groups']
+
+# Gráfico premium con ggplot2
+ggplot(df_tukey_f, aes(x = Tratamiento, y = Media, fill = Tratamiento)) +
+  geom_bar(stat = 'identity', color = 'black', alpha = 0.75, width = 0.5) +
+  geom_errorbar(aes(ymin = Media - EEM, ymax = Media + EEM), width = 0.15, size = 0.8) +
+  geom_text(aes(label = Grupo, y = Media + EEM + 0.4), size = 6, fontface = 'bold') +
+  scale_fill_brewer(palette = 'Accent') +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = 'Rendimiento Promedio por Combinación de Tratamientos (Variedad:Riego)',
+    subtitle = 'Letras distintas indican diferencias significativas (Tukey HSD, p < 0.05). Barras representan EEM.',
+    x = 'Tratamiento Combinado (Variedad : Riego)',
+    y = 'Producción Promedio (t/ha)'
+  ) +
+  theme(legend.position = 'none')
+```
+
+---
+
+# Cuestionario de Análisis del Experimento
+
+1.  **¿El término de interacción `Variedad:Riego` resultó estadísticamente significativo en el ANOVA? ¿Qué implicaciones agronómicas y prácticas tiene este resultado para un agricultor?**
+    *Respuesta:*
+2.  **De acuerdo con la prueba de Tukey, ¿cuál es la mejor combinación de Variedad y Riego para maximizar la producción? ¿Hay diferencias estadísticas entre la mejor combinación y la segunda mejor?**
+    *Respuesta:*
+3.  **¿La inclusión del factor 'Bloque' (Invernaderos) fue efectiva en este diseño experimental? Justifica tu respuesta observando el valor de p del factor Bloque en el ANOVA.**
+    *Respuesta:*
+4.  **¿Qué supuestos matemáticos de los residuos fueron validados y qué nos indican los p-valores obtenidos en Shapiro-Wilk y Levene?**
+    *Respuesta:*
+
+---
+
+# **ACTIVIDAD PRÁCTICA AUTÓNOMA (Taller de Aplicación)**
+
+**Contexto Agrícola de la Tarea:**  
+Un agrónomo desea evaluar cómo interactúan **2 niveles de factor Semilla** (`S1`, `S2`) y **3 niveles de factor Espaciamiento** entre plantas (`10cm`, `20cm`, `30cm`) sobre la variable de respuesta **Altura de la planta** en centímetros (`Altura_cm`). 
+
+Debido a que el ensayo de campo se estableció en un terreno con variabilidad sistemática de la textura del suelo, el investigador agrupó las parcelas experimentales en **3 Bloques** basados en la textura predominante del suelo (`Franco`, `Arcilloso`, `Arenoso`). Este ensayo corresponde a un **Arreglo Factorial $2 \times 3$ conducido bajo un Diseño de Bloques Completos al Azar (DBCA)**.
+
+**Conceptos de Preparación:**
+*   **Unidad Experimental:** Es la micro-parcela o surco de cultivo a la que se le aplica de forma independiente y aleatoria una de las 6 combinaciones de tratamiento (ej: Semilla S1 con Espaciamiento 10cm) dentro de un bloque de suelo determinado.
+*   **Distribución del Gradiente en el Campo:** Los 3 Bloques se organizan horizontalmente sobre cada franja de textura homogénea. Dentro de cada bloque se siembran las 6 combinaciones aleatorizadas.
+
+## Esquema del Croquis de Campo ($2 \times 3$ Factorial en DBCA):
+```
+                 [ DIRECCIÓN DE LA TEXTURA DEL SUELO ]
+============================================================================
+BLOQUE 1 (Textura Suelo: Franco)
++-----------+-----------+-----------+-----------+-----------+-----------+
+|  S1-10cm  |  S2-30cm  |  S1-20cm  |  S2-10cm  |  S1-30cm  |  S2-20cm  |  <- Aleatorio
++-----------+-----------+-----------+-----------+-----------+-----------+
+============================================================================
+BLOQUE 2 (Textura Suelo: Arcilloso)
++-----------+-----------+-----------+-----------+-----------+-----------+
+|  S2-20cm  |  S1-10cm  |  S2-10cm  |  S1-30cm  |  S2-30cm  |  S1-20cm  |  <- Aleatorio
++-----------+-----------+-----------+-----------+-----------+-----------+
+============================================================================
+BLOQUE 3 (Textura Suelo: Arenoso)
++-----------+-----------+-----------+-----------+-----------+-----------+
+|  S1-30cm  |  S1-20cm  |  S2-20cm  |  S2-30cm  |  S1-10cm  |  S2-10cm  |  <- Aleatorio
++-----------+-----------+-----------+-----------+-----------+-----------+
+============================================================================
+```
+
+## Objetivos del Estudiante:
+1.  **Importación desde Excel:** Cargar el archivo de datos real `tarea_taller4_factorial.xlsx` usando `readxl`.
+2.  **Preparación de Datos:** Convertir las columnas categóricas a tipo factor.
+3.  **Visualización Exploratoria:** Generar un boxplot o gráfico exploratorio inicial.
+4.  **Ajuste del ANOVA Factorial:** Ajustar el modelo incluyendo la interacción `Semilla * Espaciamiento` más los bloques. Desplegar la tabla ANOVA.
+5.  **Validación de los Supuestos:**
+    *   Diagnóstico gráfico con `check_model()`.
+    *   Prueba cuantitativa de Shapiro-Wilk para los residuos.
+    *   Prueba cuantitativa de Levene para los tratamientos combinados.
+6.  **Prueba de Tukey Post-Hoc:** Ejecutar la prueba de Tukey HSD sobre las combinaciones de factores para agrupar las medias.
+7.  **Visualización de Comparación de Medias:**
+    *   Gráfica rápida nativa con `plot()`.
+    *   Gráfica de barras premium con `ggplot2` mostrando EEM y letras de Tukey.
+8.  **Cuestionario de Interpretación:** Responder a las interrogantes agronómicas de los agricultores.
+
+---
+
+### **Paso 1: Importación del Excel de la Tarea**
+
+**Instrucciones:** Escribe la sentencia de R adecuada para importar el archivo `tarea_taller4_factorial.xlsx` que se encuentra en tu directorio de trabajo usando la función `read_excel()`. Asigna los datos a la variable `datos_tarea4` y visualiza la estructura con `str()` y las primeras líneas con `head()`.
+
+```{r paso1}
+# Descarga remota de la tarea (silenciosa y automática si no existe localmente)
+excel_tarea <- "tarea_taller4_factorial.xlsx"
+
+if (!file.exists(excel_tarea)) {
+  message("Descargando tarea_taller4_factorial.xlsx desde GitHub...")
+  url_tarea_git <- "https://raw.githubusercontent.com/PALP31/BioAgro-Stats/main/01_Exploracion_Supuestos/tarea_taller4_factorial.xlsx"
+  tryCatch({
+    download.file(url_tarea_git, destfile = excel_tarea, mode = "wb", quiet = TRUE)
+    message("¡Archivo de la tarea descargado exitosamente!")
+  }, error = function(e) {
+    message("⚠️ Error en descarga. Generando archivo de tarea local alternativo (CSV) como contingencia...")
+    df_contingencia <- data.frame(
+      Semilla = c("S1", "S1", "S1", "S2", "S2", "S2", "S1", "S1", "S1", "S2", "S2", "S2", "S1", "S1", "S1", "S2", "S2", "S2"),
+      Espaciamiento = c("10cm", "20cm", "30cm", "10cm", "20cm", "30cm", "10cm", "20cm", "30cm", "10cm", "20cm", "30cm", "10cm", "20cm", "30cm", "10cm", "20cm", "30cm"),
+      Textura_Suelo = c("Franco", "Franco", "Franco", "Franco", "Franco", "Franco", "Arcilloso", "Arcilloso", "Arcilloso", "Arcilloso", "Arcilloso", "Arcilloso", "Arenoso", "Arenoso", "Arenoso", "Arenoso", "Arenoso", "Arenoso"),
+      Altura_cm = c(10.5, 12.1, 14.5, 11.2, 13.0, 15.2, 9.8, 11.5, 13.8, 10.5, 12.3, 14.5, 8.5, 10.2, 12.5, 9.2, 11.0, 13.1)
+    )
+    write.csv(df_contingencia, "tarea_taller4_factorial.csv", row.names = FALSE)
+  })
+}
+
+# [Escribe tu código para importar el archivo Excel de la tarea aquí]
+# datos_tarea4 <- read_excel(excel_tarea)
+# (Si usas el fallback offline: datos_tarea4 <- read.csv("tarea_taller4_factorial.csv"))
+# datos_tarea4 <- ___
+
+# Comprobar estructura
+# str(datos_tarea4)
+```
+
+---
+
+### **Paso 2: Conversión a Factores**
+
+**Instrucciones:** Asegura que las columnas `Semilla` (Factor A), `Espaciamiento` (Factor B) y `Textura_Suelo` (Bloques) sean convertidas a tipo factor de R de manera mandatoria utilizando `as.factor()`. Comprueba los cambios con `str()`.
+
+```{r paso2}
+# [Escribe tu código para la conversión obligatoria a factores aquí]
+# datos_tarea4$Semilla       <- ___(datos_tarea4$Semilla)
+# datos_tarea4$Espaciamiento <- ___(datos_tarea4$Espaciamiento)
+# datos_tarea4$Textura_Suelo <- ___(datos_tarea4$Textura_Suelo)
+
+# Comprobar estructura
+# str(datos_tarea4)
+```
+
+---
+
+### **Paso 3: Perfil de Interacción Visual**
+
+**Instrucciones:** Construye el gráfico de interacción (`interaction.plot`) para evaluar de forma preliminar si las pendientes de la altura de la planta a través de los diferentes espaciamientos difieren según el tipo de semilla. Dibuja las líneas usando `type = 'b'`.
+
+```{r paso3}
+# [Escribe tu código para construir el gráfico de perfiles de interacción aquí]
+# interaction.plot(
+#   x.factor = datos_tarea4$___,
+#   trace.factor = datos_tarea4$___,
+#   response = datos_tarea4$___,
+#   type = "b",
+#   pch = c(19, 17),
+#   col = c("blue", "red"),
+#   xlab = "Espaciamiento",
+#   ylab = "Altura Promedio (cm)",
+#   legend = TRUE,
+#   main = "Gráfico de Perfil: Interacción Semilla * Espaciamiento"
+# )
+```
+
+---
+
+### **Paso 4: Ajuste del Modelo Factorial en DBCA y ANOVA**
+
+**Instrucciones:** Ajusta el modelo factorial lineal aditivo en DBCA incluyendo la interacción de `Semilla` y `Espaciamiento`, y el factor de bloqueo `Textura_Suelo`. Asigna el resultado a `modelo_tarea4` y despliega el ANOVA con `summary()`.
+
+```{r paso4}
+# [Escribe tu código para ajustar el modelo y desplegar la tabla ANOVA aquí]
+# modelo_tarea4 <- aov(Altura_cm ~ Semilla ___ Espaciamiento + Textura_Suelo, data = datos_tarea4)
+# summary(modelo_tarea4)
+```
+
+---
+
+### **Paso 5: Validación de los Supuestos del Modelo (Residuos)**
+
+Verifica por separado los supuestos teóricos del modelo sobre los residuos de `modelo_tarea4`:
+
+#### **5.1 Diagnóstico Gráfico Integral**
+**Instrucciones:** Utiliza `check_model()` de la librería `performance` para inspeccionar la normalidad y la homogeneidad de varianza gráficamente.
+
+```{r paso5_1}
+# [Escribe tu código para el diagnóstico gráfico automatizado de residuos aquí]
+# check_model(modelo_tarea4, check = c("normality", "homogeneity"))
+```
+
+#### **5.2 Prueba Formal de Normalidad**
+**Instrucciones:** Extrae los residuos de `modelo_tarea4` y evalúa cuantitativamente la normalidad mediante la prueba de `shapiro.test()`.
+
+```{r paso5_2}
+# [Escribe tu código para evaluar la normalidad mediante Shapiro-Wilk aquí]
+# residuos_tarea4 <- residuals(___)
+# shapiro.test(residuos_tarea4)
+```
+
+#### **5.3 Prueba Formal de Homocedasticidad**
+**Instrucciones:** Crea la interacción categórica de tratamientos y evalúa si existe homogeneidad de varianzas mediante la prueba de `LeveneTest()` (de la librería `DescTools`).
+
+```{r paso5_3}
+# [Escribe tu código para evaluar la homocedasticidad mediante LeveneTest aquí]
+# datos_tarea4$Tratamiento_Combinado <- interaction(datos_tarea4$Semilla, datos_tarea4$Espaciamiento)
+# LeveneTest(Altura_cm ~ Tratamiento_Combinado, data = ___)
+```
+
+---
+
+### **Paso 6: Comparación de Medias mediante Tukey HSD**
+
+**Instrucciones:** Si la interacción `Semilla:Espaciamiento` resultó significativa en la tabla ANOVA, ejecuta la prueba post-hoc de Tukey HSD para las combinaciones de factores utilizando la función `HSD.test()` de `agricolae`. Guarda el resultado en `tukey_tarea4` e imprime el agrupamiento en consola.
+
+```{r paso6}
+# [Escribe tu código para ejecutar el test Tukey HSD aquí]
+# tukey_tarea4 <- HSD.test(modelo_tarea4, c("Semilla", "Espaciamiento"), group = TRUE, console = TRUE)
+```
+
+---
+
+### **Paso 7: Visualización Avanzada de Medias y Letras de Tukey**
+
+#### **7.1 Gráfica Básica (Nativa)**
+**Instrucciones:** Dibuja la gráfica rápida nativa aplicando la función `plot()` sobre el objeto `tukey_tarea4`.
+
+```{r paso7_1}
+# [Escribe tu código para generar la gráfica nativa de Tukey aquí]
+# plot(tukey_tarea4, variation = 'SE', col = 'lightgreen', main = 'Tukey HSD: Tarea Semilla * Espaciamiento')
+```
+
+#### **7.2 Gráfica Premium con ggplot2**
+**Instrucciones:** Extrae los promedios y errores estándar de `tukey_tarea4` y construye un gráfico de barras premium con ggplot2. Añade las barras de error estándar de la media (EEM) y dibuja las letras de Tukey sobre cada barra.
+
+```{r paso7_2}
+# [Escribe tu código para elaborar la visualización premium de ggplot2 aquí]
+# df_tukey_t4 <- data.frame(
+#   Tratamiento = rownames(tukey_tarea4$means),
+#   Media = tukey_tarea4$means$Altura_cm,
+#   SD = tukey_tarea4$means$std,
+#   Rep = tukey_tarea4$means$r
+# )
+# 
+# # Cálculo de las barras de error (Error Estándar de la Media)
+# df_tukey_t4$EEM <- df_tukey_t4$SD / sqrt(df_tukey_t4$Rep)
+# df_tukey_t4$Grupo <- tukey_tarea4$groups[rownames(df_tukey_t4), 'groups']
+# 
+# # Gráfico premium con ggplot2
+# ggplot(df_tukey_t4, aes(x = Tratamiento, y = Media, fill = Tratamiento)) +
+#   geom_bar(stat = 'identity', color = 'black', alpha = 0.75, width = 0.5) +
+#   geom_errorbar(aes(ymin = Media - EEM, ymax = Media + EEM), width = 0.15, size = 0.8) +
+#   geom_text(aes(label = Grupo, y = Media + EEM + 0.3), size = 6, fontface = 'bold') +
+#   scale_fill_brewer(palette = 'Spectral') +
+#   theme_minimal(base_size = 14) +
+#   labs(
+#     title = 'Altura Promedio por Combinación de Tratamientos (Semilla:Espaciamiento)',
+#     subtitle = 'Letras distintas indican diferencias significativas (Tukey HSD, p < 0.05). Barras representan EEM.',
+#     x = 'Tratamiento Combinado (Semilla : Espaciamiento)',
+#     y = 'Altura Promedio (cm)'
+#   ) +
+#   theme(legend.position = 'none')
+```
+
+---
+
+### **Paso 8: Cuestionario Final de Conclusiones Técnicas**
+
+Responde a las siguientes preguntas analizando críticamente los resultados del ensayo de espaciamientos y semillas:
+
+1.  **¿Existe una interacción estadísticamente significativa entre la Semilla y el Espaciamiento en la altura de la planta ($p < 0.05$)? ¿Qué interpretación física o agronómica le das a esta interacción?**
+    *Respuesta:*
+2.  **De acuerdo al agrupamiento del test de Tukey, ¿cuál o cuáles combinaciones de Semilla y Espaciamiento producen plantas significativamente más altas? Justifica basándote en las letras de rango.**
+    *Respuesta:*
+3.  **¿La textura del suelo (Bloques) resultó significativa en el ANOVA? ¿Fue adecuado bloquear el terreno experimental por textura o se habría obtenido más potencia estadística usando un DCA simple?**
+    *Respuesta:*
+4.  **¿Los supuestos de normalidad y homocedasticidad se cumplieron de manera satisfactoria para los residuos de este modelo? Argumenta tu respuesta citando los valores de p obtenidos en Shapiro-Wilk y Levene.**
+    *Respuesta:*

@@ -1,0 +1,4 @@
+project: "Aplicaciones_estadistica_talleres"
+bound: true
+memory_files:
+  - ".Codex/project-memory/MEMORIA.md"
