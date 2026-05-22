@@ -1,0 +1,987 @@
+---
+title: "Taller 3: Diseño de Bloques Completamente al Azar (DBCA)"
+subtitle: "Aplicaciones Estadísticas en Agronomía"
+author: "Curso de Diseño Experimental"
+date: today
+lang: es
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+    number-sections: true
+    code-fold: false
+    code-tools: true
+    code-copy: true
+    highlight-style: github
+    embed-resources: true
+    fig-width: 9
+    fig-height: 6
+    fig-align: center
+execute:
+  echo: true
+  warning: false
+  message: false
+engine: knitr
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  comment = ""
+)
+```
+
+---
+
+# Objetivos de Aprendizaje
+
+Al finalizar este taller el estudiante será capaz de:
+
+1. Explicar la diferencia conceptual entre el **DCA** y el **DBCA**.
+2. Identificar situaciones experimentales donde el DBCA es el diseño adecuado.
+3. Escribir el **modelo estadístico** y calcular manualmente los **grados de libertad**.
+4. Verificar los **supuestos** del modelo (normalidad y homocedasticidad).
+5. Interpretar una **tabla ANOVA** con bloques y determinar si el bloqueo fue útil.
+6. Aplicar la **prueba de Tukey** y leer las letras de significancia.
+7. Generar **gráficos profesionales** con `ggplot2` para reportar resultados.
+
+::: {.callout-tip}
+## 🚀 Compatibilidad con Google Colab y Ejecución en la Nube
+Este taller es 100% compatible con **Google Colab** y se puede ejecutar directamente en tu navegador sin necesidad de instalar nada localmente.
+
+Para abrir este taller en Google Colab:
+1. Haz clic en el siguiente botón para iniciar el cuaderno en la nube:  
+   [![Abrir en Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PALP31/BioAgro-Stats/blob/main/01_Exploracion_Supuestos/Taller3_DBCA.ipynb)
+2. Una vez en Colab, asegúrate de que el entorno esté configurado con el **Kernel de R** (verás el logo de R en la esquina superior derecha).
+3. La primera celda de código configurará el entorno e instalará todas las librerías necesarias de forma silenciosa.
+:::
+
+---
+
+# Fundamentos Teóricos del DBCA
+
+## ¿Qué es el DBCA y cuándo se usa?
+
+El **Diseño de Bloques Completamente al Azar (DBCA)** es una extensión del DCA que se utiliza cuando las unidades experimentales **no son homogéneas** y existe una fuente de variación **conocida y controlable** que puede afectar la variable de respuesta.
+
+> 💡 **Analogía agrícola:** Imagina que deseas evaluar 5 fungicidas en un campo con un *gradiente de fertilidad* de Norte a Sur. Si asignas los tratamientos completamente al azar (DCA), el fertilizante A podría caer en la zona más fértil por pura casualidad, haciendo que parezca mejor no por su efecto real, sino por la fertilidad del suelo. **Solución:** Dividir el campo en franjas (Bloques) perpendiculares al gradiente. Dentro de cada franja, asignar los 5 fungicidas al azar.
+
+## Comparación DCA vs DBCA {#sec-comparacion}
+
+| Criterio | DCA | DBCA |
+|---|---|---|
+| Unidades exp. | Homogéneas | Heterogéneas |
+| Fuentes de variación | Solo tratamientos | Tratamientos + Bloques |
+| Modelo estadístico | $Y_{ij} = \mu + \tau_i + \varepsilon_{ij}$ | $Y_{ij} = \mu + \tau_i + \beta_j + \varepsilon_{ij}$ |
+| GL del Error | $N - k$ | $(k-1)(r-1)$ |
+| Sensibilidad | Menor (con heterogeneidad) | Mayor (aísla variación del bloque) |
+| Uso típico | Invernadero uniforme | Campo con gradiente |
+
+: Comparación entre DCA y DBCA {#tbl-comparacion}
+
+## Modelo Estadístico del DBCA
+
+$$Y_{ij} = \mu + \tau_i + \beta_j + \varepsilon_{ij}$$
+
+donde:
+
+- $Y_{ij}$ = Observación del tratamiento $i$ en el bloque $j$
+- $\mu$ = Media general (constante del experimento)
+- $\tau_i$ = Efecto del tratamiento $i$ ($i = 1, 2, \ldots, k$), donde $\sum_{i=1}^k \tau_i = 0$
+- $\beta_j$ = Efecto del bloque $j$ ($j = 1, 2, \ldots, r$), donde $\sum_{j=1}^r \beta_j = 0$
+- $\varepsilon_{ij}$ = Error aleatorio, $\varepsilon_{ij} \sim N(0, \sigma^2)$ i.i.d.
+
+## Grados de Libertad {#sec-gl}
+
+Con $k$ tratamientos, $r$ bloques y $N = k \times r$ observaciones:
+
+| Fuente de Variación | GL | Fórmula |
+|---|---|---|
+| Tratamientos | $k - 1$ | Número de tratamientos menos 1 |
+| Bloques | $r - 1$ | Número de bloques menos 1 |
+| Error | $(k-1)(r-1)$ | $N - k - r + 1$ |
+| **Total** | $N - 1$ | $kr - 1$ |
+
+: Grados de Libertad del DBCA {#tbl-gl}
+
+::: {.callout-important}
+## ⚠️ Comparación de GL del Error: DCA vs DBCA
+
+Para $k = 5$ tratamientos y $r = 4$ bloques ($N = 20$):
+
+- **En DCA:** $GL_{Error} = N - k = 20 - 5 = \mathbf{15}$
+- **En DBCA:** $GL_{Error} = (k-1)(r-1) = 4 \times 3 = \mathbf{12}$
+
+El DBCA tiene **3 GL menos** en el error (transferidos a Bloques). Esto puede reducir la potencia si los bloques no explican variación real. Sin embargo, si los bloques son necesarios, el $CM_{Error}$ del DBCA será **mucho menor**, compensando la pérdida de GL.
+:::
+
+## Tabla ANOVA del DBCA
+
+| Fuente (FV) | GL | SC | CM | $F_{calc}$ | $p$-valor |
+|---|---|---|---|---|---|
+| Tratamientos | $k-1$ | $SC_{Trat}$ | $CM_{Trat}$ | $CM_{Trat}/CM_{Error}$ | $P(F > F_{calc})$ |
+| Bloques | $r-1$ | $SC_{Blq}$ | $CM_{Blq}$ | $CM_{Blq}/CM_{Error}$ | $P(F > F_{calc})$ |
+| Error | $(k-1)(r-1)$ | $SC_{Error}$ | $CM_{Error}$ | — | — |
+| **Total** | $N-1$ | $SC_{Total}$ | — | — | — |
+
+: Estructura de la Tabla ANOVA para DBCA {#tbl-anova}
+
+---
+
+# Instalación y Carga de Librerías
+
+# Evitar diálogos interactivos de selección de espejo CRAN
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Instalar si no están disponibles (ejecutar una vez)
+paquetes <- c("ggplot2", "agricolae", "car", "dplyr", "tidyr",
+              "ggpubr", "emmeans", "multcompView", "scales")
+
+for (p in paquetes) {
+  if (!requireNamespace(p, quietly = TRUE)) install.packages(p, dependencies = TRUE, quiet = TRUE)
+}
+
+# Cargar librerías
+library(ggplot2)
+library(agricolae)
+library(car)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(emmeans)
+library(multcompView)
+library(scales)
+
+cat("✅ Librerías cargadas correctamente.\n")
+```
+
+---
+
+# Caso de Estudio: Fungicidas en Rendimiento de Frijol
+
+## Contexto Agronómico
+
+Un agrónomo del Ministerio de Agricultura desea evaluar el efecto de **5 tratamientos fungicidas** (incluyendo un control sin aplicación) sobre el **rendimiento de frijol** (*Phaseolus vulgaris*) expresado en kg/ha.
+
+**Problema:** El lote experimental presenta un **gradiente de fertilidad del suelo** de Norte a Sur (el suelo del Sur es más fértil y tiene mayor materia orgánica). Si se aplica un DCA, este gradiente podría confundirse con el efecto de los fungicidas.
+
+**Solución (DBCA):** El campo se divide en **4 bloques** perpendiculares al gradiente (Norte → Centro-Norte → Centro-Sur → Sur). Dentro de cada bloque, los 5 fungicidas se asignan completamente al azar.
+
+| Parámetro | Valor |
+|---|---|
+| Tratamientos ($k$) | 5 (Control, Fungicida A, B, C, D) |
+| Bloques ($r$) | 4 (Norte, Centro-N, Centro-S, Sur) |
+| Total UE ($N$) | 20 |
+| Variable respuesta | Rendimiento (kg/ha) |
+
+## Carga y Exploración de Datos
+
+```{r carga-datos}
+# Nombre del archivo de datos CSV
+csv_file <- "datos_taller3_dbca.csv"
+
+# Descargar desde GitHub si no existe (ej. en Google Colab o entorno sin archivos locales)
+if (!file.exists(csv_file)) {
+  message("Descargando datos_taller3_dbca.csv desde GitHub...")
+  url_git <- "https://raw.githubusercontent.com/PALP31/BioAgro-Stats/main/01_Exploracion_Supuestos/datos_taller3_dbca.csv"
+  tryCatch({
+    download.file(url_git, destfile = csv_file, quiet = TRUE)
+    message("¡Archivo descargado exitosamente!")
+  }, error = function(e) {
+    message("⚠️ Error en descarga. Cargando datos de forma programática...")
+  })
+}
+
+# Carga de datos
+if (file.exists(csv_file)) {
+  datos <- read.csv(csv_file)
+} else {
+  # Fallback programático idéntico en caso de fallo de red
+  datos <- data.frame(
+    Bloque = rep(c("Bloque_1_Norte", "Bloque_2_CentroN", "Bloque_3_CentroS", "Bloque_4_Sur"), each = 5),
+    Fungicida = rep(c("Control", "Fungicida_A", "Fungicida_B", "Fungicida_C", "Fungicida_D"), times = 4),
+    Rendimiento_kgha = c(1375.4, 1689.2, 1895.7, 2048.3, 2243.6,
+                        1441.8, 1762.5, 1921.4, 2127.9, 2318.2,
+                        1518.3, 1843.7, 2001.5, 2198.6, 2402.1,
+                        1592.7, 1918.4, 2087.3, 2284.5, 2481.9)
+  )
+  message("✅ Base de datos cargada vía fallback programático.")
+}
+
+# Convertir a factores con niveles ordenados
+datos$Bloque <- factor(datos$Bloque,
+  levels = c("Bloque_1_Norte", "Bloque_2_CentroN",
+             "Bloque_3_CentroS", "Bloque_4_Sur"),
+  labels = c("B1: Norte", "B2: Centro-N", "B3: Centro-S", "B4: Sur"))
+
+datos$Fungicida <- factor(datos$Fungicida,
+  levels = c("Control", "Fungicida_A", "Fungicida_B",
+             "Fungicida_C", "Fungicida_D"))
+
+# Verificar estructura
+str(datos)
+```
+
+```{r tabla-frecuencias}
+# Verificar que es un diseño balanceado (cada tratamiento aparece una vez por bloque)
+cat("📊 Tabla de distribución (filas = Fungicida, columnas = Bloque):\n")
+print(table(datos$Fungicida, datos$Bloque))
+```
+
+::: {.callout-note}
+## ¿Por qué verificar la tabla de distribución?
+
+Un DBCA es **balanceado** si cada tratamiento aparece **exactamente una vez** en cada bloque. La tabla anterior debe mostrar solamente valores de 1. Si aparece un 0 o un 2, el diseño está incompleto o mal ingresado.
+:::
+
+## Estadísticas Descriptivas
+
+```{r estadisticas-desc}
+# Por tratamiento
+cat("📊 Estadísticas por Fungicida:\n")
+resumen_trt <- datos %>%
+  group_by(Fungicida) %>%
+  summarise(
+    n      = n(),
+    Media  = round(mean(Rendimiento_kgha), 1),
+    DE     = round(sd(Rendimiento_kgha), 1),
+    Min    = round(min(Rendimiento_kgha), 1),
+    Max    = round(max(Rendimiento_kgha), 1),
+    CV_pct = round(sd(Rendimiento_kgha) / mean(Rendimiento_kgha) * 100, 1),
+    .groups = "drop"
+  )
+print(as.data.frame(resumen_trt))
+
+# Por bloque
+cat("\n📊 Estadísticas por Bloque:\n")
+resumen_blq <- datos %>%
+  group_by(Bloque) %>%
+  summarise(
+    n     = n(),
+    Media = round(mean(Rendimiento_kgha), 1),
+    DE    = round(sd(Rendimiento_kgha), 1),
+    .groups = "drop"
+  )
+print(as.data.frame(resumen_blq))
+```
+
+---
+
+# Exploración Visual de los Datos
+
+## Histograma de la Distribución General
+
+```{r histograma}
+ggplot(datos, aes(x = Rendimiento_kgha)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 10,
+                 fill = "#2E86AB", color = "white", alpha = 0.85) +
+  geom_density(color = "#E84855", linewidth = 1.2, linetype = "dashed") +
+  labs(
+    title    = "Distribución del Rendimiento de Frijol",
+    subtitle = "Todos los datos del experimento DBCA",
+    x        = "Rendimiento (kg/ha)",
+    y        = "Densidad"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, color = "gray40")
+  )
+```
+
+## Boxplot por Tratamiento
+
+```{r boxplot-tratamiento}
+paleta_trt <- c("#6C757D", "#2E86AB", "#A8C686", "#F4A261", "#E84855")
+
+ggplot(datos, aes(x = Fungicida, y = Rendimiento_kgha, fill = Fungicida)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA, width = 0.55) +
+  geom_jitter(width = 0.15, size = 3, alpha = 0.85, color = "black") +
+  scale_fill_manual(values = paleta_trt) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title    = "Rendimiento de Frijol por Fungicida",
+    subtitle = "Cada punto representa una parcela (unidad experimental)",
+    x        = "Tratamiento Fungicida",
+    y        = "Rendimiento (kg/ha)"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title      = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle   = element_text(hjust = 0.5, color = "gray40"),
+    legend.position = "none",
+    axis.text.x     = element_text(angle = 15, hjust = 1)
+  )
+```
+
+## Boxplot por Bloque (¿Existe gradiente?)
+
+```{r boxplot-bloque}
+paleta_blq <- c("#457B9D", "#1D3557", "#A8DADC", "#E63946")
+
+ggplot(datos, aes(x = Bloque, y = Rendimiento_kgha, fill = Bloque)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA, width = 0.55) +
+  geom_jitter(width = 0.15, size = 3, alpha = 0.85, color = "black") +
+  scale_fill_manual(values = paleta_blq) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title    = "Rendimiento por Bloque (Zona del Campo)",
+    subtitle = "¿Se observa un gradiente de fertilidad Norte → Sur?",
+    x        = "Bloque",
+    y        = "Rendimiento (kg/ha)"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title      = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle   = element_text(hjust = 0.5, color = "gray40"),
+    legend.position = "none"
+  )
+```
+
+## Mapa de Calor (Heatmap): Diseño Completo
+
+```{r heatmap}
+ggplot(datos, aes(x = Fungicida, y = Bloque, fill = Rendimiento_kgha)) +
+  geom_tile(color = "white", linewidth = 0.8) +
+  geom_text(aes(label = Rendimiento_kgha), size = 3.8, fontface = "bold") +
+  scale_fill_gradient2(
+    low      = "#457B9D",
+    mid      = "#F1FAEE",
+    high     = "#E63946",
+    midpoint = mean(datos$Rendimiento_kgha),
+    name     = "kg/ha"
+  ) +
+  labs(
+    title    = "Mapa de Calor: Rendimiento por Celda Experimental",
+    subtitle = "Cada celda = 1 unidad experimental (Fungicida × Bloque)",
+    x        = "Fungicida",
+    y        = "Bloque"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, color = "gray40"),
+    axis.text.x   = element_text(angle = 15, hjust = 1)
+  )
+```
+
+::: {.callout-note}
+## Interpretación del Mapa de Calor
+
+El mapa de calor muestra las **20 celdas** del experimento (5 fungicidas × 4 bloques). Si la asunción de **aditividad** del DBCA se cumple (sin interacción Fungicida × Bloque), debe verse un patrón ordenado: las celdas de la misma fila (mismo bloque) tienen colores similares, y las celdas de la misma columna (mismo fungicida) tienen colores similares.
+:::
+
+## Perfil de Medias (Verificación de Aditividad)
+
+```{r perfil-medias}
+# El DBCA asume que NO hay interacción entre Tratamiento y Bloque
+# → Las líneas del perfil de medias deben ser APROXIMADAMENTE PARALELAS
+
+medias_celda <- datos %>%
+  group_by(Bloque, Fungicida) %>%
+  summarise(Media = mean(Rendimiento_kgha), .groups = "drop")
+
+ggplot(medias_celda,
+       aes(x = Bloque, y = Media, group = Fungicida, color = Fungicida)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 4) +
+  scale_color_manual(values = paleta_trt) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title    = "Perfil de Medias: Verificación de Aditividad",
+    subtitle = "Líneas paralelas → sin interacción → DBCA apropiado",
+    x        = "Bloque (Zona del Campo)",
+    y        = "Rendimiento Medio (kg/ha)",
+    color    = "Fungicida"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, color = "gray40")
+  )
+```
+
+::: {.callout-important}
+## Asunción Crítica del DBCA: Aditividad (Sin Interacción)
+
+El DBCA asume que el efecto del tratamiento es **constante** en todos los bloques. Si las líneas del perfil se **cruzan marcadamente**, podría existir una interacción Tratamiento × Bloque, lo que invalida el modelo aditivo. En ese caso, se necesitaría un modelo más complejo o una transformación de datos.
+:::
+
+---
+
+# Ajuste del Modelo DBCA
+
+```{r modelo-ajuste}
+# MODELO: Rendimiento ~ Fungicida + Bloque
+# Primero el tratamiento de interés, luego el bloque de control
+modelo_dbca <- aov(Rendimiento_kgha ~ Fungicida + Bloque, data = datos)
+
+# Calcular y verificar los GL
+k <- nlevels(datos$Fungicida)
+r <- nlevels(datos$Bloque)
+N <- nrow(datos)
+
+cat("📐 GRADOS DE LIBERTAD DEL EXPERIMENTO:\n")
+cat(sprintf("   k (tratamientos) = %d\n", k))
+cat(sprintf("   r (bloques)      = %d\n", r))
+cat(sprintf("   N = k × r        = %d\n\n", N))
+cat(sprintf("   GL Tratamientos = k - 1       = %d\n", k-1))
+cat(sprintf("   GL Bloques      = r - 1       = %d\n", r-1))
+cat(sprintf("   GL Error        = (k-1)(r-1)  = %d\n", (k-1)*(r-1)))
+cat(sprintf("   GL Total        = N - 1       = %d\n\n", N-1))
+cat(sprintf("   ⚖️  Comparación GL_Error: DCA = %d  |  DBCA = %d\n",
+            N-k, (k-1)*(r-1)))
+```
+
+---
+
+# Verificación de Supuestos {#sec-supuestos}
+
+## ¿Por qué verificar los supuestos?
+
+El ANOVA es un método **paramétrico** que asume:
+
+1. **Normalidad de los residuos**: $\varepsilon_{ij} \sim N(0, \sigma^2)$
+2. **Homocedasticidad**: $\sigma^2_1 = \sigma^2_2 = \ldots = \sigma^2_k$ (varianzas iguales entre tratamientos)
+3. **Independencia**: Las observaciones son independientes (garantizada por el diseño)
+
+::: {.callout-warning}
+## ⚠️ Los supuestos se evalúan sobre los RESIDUOS, no sobre los datos crudos
+
+Los residuos del modelo son: $e_{ij} = Y_{ij} - \hat{Y}_{ij}$, donde $\hat{Y}_{ij}$ es el valor ajustado por el modelo.
+:::
+
+## Prueba de Normalidad (Shapiro-Wilk)
+
+```{r normalidad}
+residuos <- residuals(modelo_dbca)
+ajustados <- fitted(modelo_dbca)
+
+cat("─── PRUEBA DE SHAPIRO-WILK ─────────────────────────────────────────────\n")
+cat("H₀: Los residuos siguen una distribución Normal\n")
+cat("H₁: Los residuos NO siguen una distribución Normal\n\n")
+
+sw_test <- shapiro.test(residuos)
+print(sw_test)
+
+cat(sprintf("\nEstadístico W = %.4f\n", sw_test$statistic))
+cat(sprintf("p-valor       = %.4f\n\n", sw_test$p.value))
+
+if (sw_test$p.value > 0.05) {
+  cat("✅ CONCLUSIÓN: p > 0.05 → No se rechaza H₀.\n")
+  cat("   Los residuos son normales. El supuesto SE CUMPLE.\n")
+} else {
+  cat("⚠️  CONCLUSIÓN: p ≤ 0.05 → Se rechaza H₀.\n")
+  cat("   Los residuos NO son normales.\n")
+  cat("   Considerar: transformación log() o sqrt(), o prueba de Friedman.\n")
+}
+```
+
+## Prueba de Homocedasticidad (Levene)
+
+```{r homocedasticidad}
+cat("─── PRUEBA DE LEVENE ───────────────────────────────────────────────────\n")
+cat("H₀: σ²₁ = σ²₂ = σ²₃ = σ²₄ = σ²₅  (varianzas homogéneas)\n")
+cat("H₁: Al menos una varianza difiere\n\n")
+
+lev_test <- leveneTest(Rendimiento_kgha ~ Fungicida, data = datos)
+print(lev_test)
+
+if (lev_test$`Pr(>F)`[1] > 0.05) {
+  cat("\n✅ CONCLUSIÓN: p > 0.05 → No se rechaza H₀.\n")
+  cat("   Las varianzas son homogéneas. El supuesto SE CUMPLE.\n")
+} else {
+  cat("\n⚠️  CONCLUSIÓN: p ≤ 0.05 → Se rechaza H₀.\n")
+  cat("   Las varianzas NO son homogéneas.\n")
+  cat("   Considerar: transformación de datos o ANOVA de Welch.\n")
+}
+```
+
+## Gráficos de Diagnóstico de Residuos
+
+```{r graficos-supuestos, fig.height=5}
+# Q-Q Plot
+gg_qq <- ggplot(data.frame(residuos = residuos), aes(sample = residuos)) +
+  stat_qq(color = "#2E86AB", size = 2.5) +
+  stat_qq_line(color = "#E84855", linewidth = 1.2) +
+  labs(title = "Q-Q Plot de Normalidad",
+       subtitle = "Puntos deben seguir la línea roja",
+       x = "Cuantiles Teóricos", y = "Cuantiles Observados") +
+  theme_classic(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray40"))
+
+# Residuos vs Ajustados
+gg_rv <- ggplot(data.frame(Ajustados = ajustados, Residuos = residuos),
+                aes(x = Ajustados, y = Residuos)) +
+  geom_point(size = 3, color = "#2E86AB", alpha = 0.8) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#E84855", linewidth = 1) +
+  geom_smooth(method = "loess", se = TRUE, color = "#F4A261", linewidth = 1) +
+  labs(title = "Residuos vs Valores Ajustados",
+       subtitle = "Sin patrón = homocedasticidad OK",
+       x = "Valores Ajustados", y = "Residuos") +
+  theme_classic(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray40"))
+
+# Histograma de residuos
+gg_hist <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 8,
+                 fill = "#A8C686", color = "white", alpha = 0.85) +
+  geom_density(color = "#E84855", linewidth = 1.2) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(residuos), sd = sd(residuos)),
+                color = "#2E86AB", linewidth = 1.2, linetype = "dashed") +
+  labs(title = "Histograma de Residuos",
+       subtitle = "Curva azul = Normal teórica",
+       x = "Residuos", y = "Densidad") +
+  theme_classic(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray40"))
+
+ggarrange(gg_qq, gg_rv, gg_hist, ncol = 3, labels = c("A", "B", "C"))
+```
+
+---
+
+# Análisis de Varianza (ANOVA) {#sec-anova}
+
+## Hipótesis
+
+$$H_0^{Trat}: \tau_1 = \tau_2 = \tau_3 = \tau_4 = \tau_5 = 0 \quad \text{(ningún fungicida difiere del control)}$$
+$$H_1^{Trat}: \text{Al menos un } \tau_i \neq 0$$
+
+$$H_0^{Blq}: \beta_1 = \beta_2 = \beta_3 = \beta_4 = 0 \quad \text{(los bloques no difieren)}$$
+$$H_1^{Blq}: \text{Al menos un } \beta_j \neq 0 \quad \text{(el gradiente de fertilidad existe)}$$
+
+## Tabla ANOVA
+
+```{r tabla-anova}
+tabla_anova <- summary(modelo_dbca)
+print(tabla_anova)
+```
+
+## Interpretación de la Tabla ANOVA
+
+```{r interpretacion-anova}
+sc_trt   <- tabla_anova[[1]]$`Sum Sq`[1]
+sc_blq   <- tabla_anova[[1]]$`Sum Sq`[2]
+sc_err   <- tabla_anova[[1]]$`Sum Sq`[3]
+sc_total <- sum(tabla_anova[[1]]$`Sum Sq`)
+p_trt    <- tabla_anova[[1]]$`Pr(>F)`[1]
+p_blq    <- tabla_anova[[1]]$`Pr(>F)`[2]
+
+cat("📊 DESCOMPOSICIÓN DE LA VARIACIÓN TOTAL:\n")
+cat(sprintf("   SC_Tratamientos = %8.1f  (%.1f%% del total)\n",
+            sc_trt, sc_trt/sc_total*100))
+cat(sprintf("   SC_Bloques      = %8.1f  (%.1f%% del total)\n",
+            sc_blq, sc_blq/sc_total*100))
+cat(sprintf("   SC_Error        = %8.1f  (%.1f%% del total)\n",
+            sc_err, sc_err/sc_total*100))
+cat(sprintf("   SC_Total        = %8.1f  (100%%)\n\n", sc_total))
+
+# Conclusiones
+if (p_trt < 0.05) {
+  cat(sprintf("✅ FUNGICIDAS: p = %.4f < 0.05 → Diferencias significativas.\n", p_trt))
+  cat("   → Se procede con Tukey para identificar qué fungicida es mejor.\n\n")
+}
+if (p_blq < 0.05) {
+  cat(sprintf("✅ BLOQUES: p = %.4f < 0.05 → El gradiente de fertilidad es real.\n", p_blq))
+  cat("   → ¡El BLOQUEO FUE NECESARIO Y ÚTIL!\n")
+  cat("   → En un DCA, esta variación habría inflado el SC_Error,\n")
+  cat("      haciendo más difícil detectar diferencias entre fungicidas.\n")
+}
+
+# Eficiencia relativa
+cm_err <- tabla_anova[[1]]$`Mean Sq`[3]
+gl_blq <- tabla_anova[[1]]$Df[2]
+gl_err <- tabla_anova[[1]]$Df[3]
+cm_err_dca <- (sc_blq + sc_err) / (gl_blq + gl_err)
+ef_rel <- ((gl_blq + 1) * (gl_err + 3) * cm_err_dca) /
+          ((gl_err + 1) * (gl_blq + 3) * cm_err) * 100
+
+cat(sprintf("\n📊 EFICIENCIA RELATIVA DEL DBCA vs DCA: %.1f%%\n", ef_rel))
+if (ef_rel > 100) {
+  cat(sprintf("   → El DBCA fue %.1f%% más eficiente que el DCA.\n", ef_rel - 100))
+}
+```
+
+---
+
+# Comparaciones Múltiples: Prueba de Tukey {#sec-tukey}
+
+## Fundamento de la Prueba de Tukey (HSD)
+
+La prueba de Tukey calcula la **Diferencia Honestamente Significativa (HSD)**:
+
+$$HSD = q_{\alpha}(k, \, GL_{Error}) \times \sqrt{\frac{CM_{Error}}{r}}$$
+
+- $q_{\alpha}$ = Valor crítico de la distribución *studentized range* con $k$ tratamientos y $GL_{Error}$
+- Si $|\bar{Y}_i - \bar{Y}_j| > HSD$ → Tratamientos $i$ y $j$ son estadísticamente diferentes
+
+## Aplicación de Tukey
+
+```{r tukey}
+tukey_resultado <- HSD.test(modelo_dbca, "Fungicida", group = TRUE, console = FALSE)
+
+cat("📊 GRUPOS DE TUKEY:\n")
+cat("   (Letras iguales = NO hay diferencia significativa)\n\n")
+print(tukey_resultado$groups)
+
+cat(sprintf("\n📊 HSD (Diferencia Mínima Significativa) = %.2f kg/ha\n",
+            tukey_resultado$statistics$MSD))
+cat(sprintf("   Valor crítico q (Tukey) = %.4f\n", tukey_resultado$statistics$Tukey))
+cat(sprintf("   CM_Error = %.4f  |  GL_Error = %d\n",
+            tukey_resultado$statistics$MSerror,
+            tukey_resultado$statistics$Df))
+```
+
+```{r tukey-pares}
+cat("\n📊 TABLA DE COMPARACIONES PAREADAS:\n")
+tukey_pairs <- HSD.test(modelo_dbca, "Fungicida", group = FALSE, console = FALSE)
+print(tukey_pairs$comparison)
+```
+
+---
+
+# Gráficos de Resultados con ggplot2
+
+## Gráfico de Barras con Letras de Tukey (Básico)
+
+```{r grafico-barras}
+# Preparar datos de grupos
+grupos_tukey <- tukey_resultado$groups
+grupos_tukey$Fungicida <- rownames(grupos_tukey)
+grupos_tukey <- grupos_tukey %>%
+  rename(Media_Tukey = Rendimiento_kgha, Grupo_letra = groups)
+
+se_datos <- datos %>%
+  group_by(Fungicida) %>%
+  summarise(Media = mean(Rendimiento_kgha),
+            SE    = sd(Rendimiento_kgha) / sqrt(n()),
+            .groups = "drop")
+
+grupos_plot <- left_join(grupos_tukey, se_datos, by = "Fungicida")
+grupos_plot$Fungicida <- factor(grupos_plot$Fungicida,
+                                levels = grupos_plot$Fungicida[order(grupos_plot$Media)])
+
+ggplot(grupos_plot, aes(x = Fungicida, y = Media, fill = Fungicida)) +
+  geom_col(color = "black", width = 0.65, alpha = 0.88) +
+  geom_errorbar(aes(ymin = Media - SE, ymax = Media + SE),
+                width = 0.25, linewidth = 0.8) +
+  geom_text(aes(label = Grupo_letra, y = Media + SE + 30),
+            size = 5.5, fontface = "bold") +
+  scale_fill_manual(values = paleta_trt) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.12)), labels = comma) +
+  labs(
+    title    = "Efecto de Fungicidas en el Rendimiento de Frijol",
+    subtitle = "Barras: ±1 Error Estándar | Letras: Tukey HSD (α = 0.05)",
+    x        = "Tratamiento Fungicida",
+    y        = "Rendimiento Medio (kg/ha)",
+    caption  = "DBCA, r = 4 bloques. Letras iguales = sin diferencia significativa."
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title      = element_text(face = "bold", hjust = 0.5, size = 14),
+    plot.subtitle   = element_text(hjust = 0.5, color = "gray40"),
+    plot.caption    = element_text(color = "gray50", hjust = 0),
+    axis.text.x     = element_text(angle = 15, hjust = 1),
+    legend.position = "none"
+  )
+```
+
+## Boxplot + Puntos por Bloque + Letras Tukey (Intermedio)
+
+```{r grafico-boxplot-intermedio, fig.height=7}
+datos_plot <- left_join(datos, grupos_tukey[, c("Fungicida", "Grupo_letra")],
+                        by = "Fungicida")
+
+max_por_trt <- datos %>%
+  group_by(Fungicida) %>%
+  summarise(y_letra = max(Rendimiento_kgha) + 50, .groups = "drop")
+
+grupos_plot2 <- left_join(grupos_plot, max_por_trt, by = "Fungicida")
+
+ggplot(datos_plot, aes(x = Fungicida, y = Rendimiento_kgha, fill = Fungicida)) +
+  geom_boxplot(alpha = 0.60, outlier.shape = NA, width = 0.50, color = "gray30") +
+  geom_jitter(aes(color = Bloque), width = 0.18, size = 4, alpha = 0.9) +
+  geom_text(data = grupos_plot2,
+            aes(x = Fungicida, y = y_letra, label = Grupo_letra),
+            size = 6, fontface = "bold", color = "black") +
+  scale_fill_manual(values  = paleta_trt, name = "Fungicida") +
+  scale_color_manual(values = paleta_blq, name = "Bloque") +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title    = "Rendimiento de Frijol por Fungicida",
+    subtitle = "Puntos coloreados por bloque • Letras: Tukey HSD (α = 0.05)",
+    x        = "Fungicida",
+    y        = "Rendimiento (kg/ha)",
+    caption  = "DBCA — 4 bloques × 5 tratamientos = 20 unidades experimentales"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5, size = 14),
+    plot.subtitle = element_text(hjust = 0.5, color = "gray40"),
+    plot.caption  = element_text(color = "gray50"),
+    axis.text.x   = element_text(angle = 15, hjust = 1)
+  )
+```
+
+::: {.callout-tip}
+## Cómo leer este gráfico
+
+- **Caja** (boxplot): muestra mediana, IQR (percentiles 25-75) y rango de los datos.
+- **Puntos** (jitter): cada punto es una unidad experimental real. El color indica el bloque.
+- **Letras** (encima): grupos de Tukey. Letras iguales = sin diferencia significativa al 5%.
+- Si los puntos de un mismo bloque están siempre en la misma posición relativa entre tratamientos → el bloqueo capturó un efecto real.
+:::
+
+## Medias Estimadas con IC 95% (Nivel Avanzado)
+
+```{r grafico-emmeans}
+# Medias marginales estimadas con emmeans (más riguroso que la media aritmética)
+emm <- emmeans(modelo_dbca, ~ Fungicida)
+emm_df <- as.data.frame(emm) %>%
+  left_join(grupos_tukey[, c("Fungicida", "Grupo_letra")], by = "Fungicida") %>%
+  mutate(Fungicida = factor(Fungicida, levels = levels(datos$Fungicida)))
+
+ggplot(emm_df, aes(x = Fungicida, y = emmean, color = Fungicida)) +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.30, linewidth = 1.3) +
+  geom_text(aes(label = Grupo_letra, y = upper.CL + 30),
+            size = 5.5, fontface = "bold", color = "black") +
+  geom_hline(yintercept = mean(datos$Rendimiento_kgha),
+             linetype = "dashed", color = "gray60", linewidth = 0.8) +
+  annotate("text", x = 0.6, y = mean(datos$Rendimiento_kgha) + 30,
+           label = "Media\nglobal", size = 3.5, color = "gray50", hjust = 0) +
+  scale_color_manual(values = paleta_trt) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title    = "Medias Estimadas con Intervalo de Confianza 95%",
+    subtitle = "Medias marginales (emmeans) ajustadas por el modelo DBCA",
+    x        = "Fungicida",
+    y        = "Rendimiento Estimado (kg/ha)",
+    caption  = "IC 95% calculado con el CM_Error del DBCA • Letras: Tukey HSD (α = 0.05)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title      = element_text(face = "bold", hjust = 0.5, size = 14),
+    plot.subtitle   = element_text(hjust = 0.5, color = "gray40"),
+    plot.caption    = element_text(color = "gray50"),
+    axis.text.x     = element_text(angle = 15, hjust = 1),
+    legend.position = "none"
+  )
+```
+
+---
+
+# Síntesis e Interpretación Agronómica
+
+## Resumen Estadístico
+
+```{r resumen-final}
+cat("╔══════════════════════════════════════════════════════════════════╗\n")
+cat("║                    RESUMEN ESTADÍSTICO                         ║\n")
+cat("╚══════════════════════════════════════════════════════════════════╝\n\n")
+
+cat("1. DISEÑO:\n")
+cat("   DBCA con k=5 fungicidas y r=4 bloques (N=20 unidades experimentales)\n\n")
+
+cat("2. SUPUESTOS (α = 0.05):\n")
+cat(sprintf("   - Normalidad (Shapiro-Wilk): W = %.4f, p = %.4f → %s\n",
+            sw_test$statistic, sw_test$p.value,
+            ifelse(sw_test$p.value > 0.05, "✅ Cumplido", "⚠️ No cumplido")))
+cat(sprintf("   - Homocedasticidad (Levene): p = %.4f → %s\n",
+            lev_test$`Pr(>F)`[1],
+            ifelse(lev_test$`Pr(>F)`[1] > 0.05, "✅ Cumplido", "⚠️ No cumplido")))
+
+cat("\n3. ANOVA:\n")
+cat(sprintf("   - Fungicidas: F = %.2f, p = %.4f → %s\n",
+            tabla_anova[[1]]$`F value`[1], p_trt,
+            ifelse(p_trt < 0.05, "✅ Significativo", "⚪ No significativo")))
+cat(sprintf("   - Bloques:    F = %.2f, p = %.4f → %s\n",
+            tabla_anova[[1]]$`F value`[2], p_blq,
+            ifelse(p_blq < 0.05, "✅ Bloqueo útil", "⚪ Bloqueo innecesario")))
+
+cat("\n4. TUKEY (α = 0.05):\n")
+print(tukey_resultado$groups)
+
+cat("\n5. EFICIENCIA RELATIVA:\n")
+cat(sprintf("   El DBCA fue %.1f%% más eficiente que el DCA.\n", ef_rel))
+```
+
+::: {.callout-note}
+## 🌿 Recomendación Agronómica
+
+Con base en los resultados estadísticos, **Fungicida D** presentó el mayor rendimiento medio de frijol y se ubicó en el grupo superior de Tukey. Sin embargo, la recomendación final de adopción debe considerar:
+
+- **Costo beneficio**: ¿El incremento en rendimiento justifica el costo del fungicida?
+- **Impacto ambiental**: Toxicidad para fauna benéfica, resistencia de patógenos.
+- **Disponibilidad**: Acceso al producto en la región.
+- **Repetibilidad**: Repetir el experimento en múltiples localidades y años.
+
+El hecho de que los **bloques fueran significativos** confirma que el gradiente de fertilidad era real y que sin el bloqueo, las diferencias entre fungicidas habrían sido más difíciles de detectar (mayor error experimental).
+:::
+
+---
+
+# 📝 Taller para Estudiantes {#sec-taller}
+
+## Contexto
+
+Un investigador del **Instituto Nacional de Innovación Agraria (INIA)** desea evaluar el efecto de **4 variedades de maíz** (*Zea mays*) sobre el rendimiento en grano (ton/ha).
+
+**Problema de diseño:** Las condiciones climáticas (humedad, temperatura) varían semana a semana durante el ciclo de siembra. Para controlar esta variabilidad, se decide **bloquear por semana de siembra**.
+
+| Parámetro | Valor |
+|---|---|
+| Variedades ($k$) | 4 (Criolla, Intermedia 1, Intermedia 2, Mejorada) |
+| Bloques ($r$) | 5 semanas de siembra |
+| Total UE ($N$) | 20 |
+| Archivo de datos | `tarea_taller3_dbca.csv` |
+
+## Etapas del Análisis
+
+### Etapa 1: Carga y Exploración de Datos
+
+```{r taller-etapa1}
+# Nombre del archivo de datos CSV de la tarea
+csv_tarea <- "tarea_taller3_dbca.csv"
+
+# Descargar desde GitHub si no existe
+if (!file.exists(csv_tarea)) {
+  message("Descargando tarea_taller3_dbca.csv desde GitHub...")
+  url_tarea_git <- "https://raw.githubusercontent.com/PALP31/BioAgro-Stats/main/01_Exploracion_Supuestos/tarea_taller3_dbca.csv"
+  tryCatch({
+    download.file(url_tarea_git, destfile = csv_tarea, quiet = TRUE)
+    message("¡Archivo de la tarea descargado exitosamente!")
+  }, error = function(e) {
+    message("⚠️ Error en descarga. Cargando datos de la tarea de forma programática...")
+  })
+}
+
+# Carga de datos de la tarea
+if (file.exists(csv_tarea)) {
+  datos_tarea <- read.csv(csv_tarea)
+} else {
+  # Fallback programático idéntico en caso de fallo de red
+  datos_tarea <- data.frame(
+    Bloque_Semana = rep(c("Semana_1", "Semana_2", "Semana_3", "Semana_4", "Semana_5"), each = 4),
+    Variedad = rep(c("Var_Criolla", "Var_Intermedia_1", "Var_Intermedia_2", "Var_Mejorada"), times = 5),
+    Rendimiento_tha = c(3.087, 3.612, 4.198, 4.742,
+                        3.452, 3.987, 4.576, 5.113,
+                        3.784, 4.302, 4.897, 5.421,
+                        3.963, 4.518, 5.124, 5.658,
+                        4.152, 4.731, 5.302, 5.891)
+  )
+  message("✅ Base de datos de la tarea cargada vía fallback programático.")
+}
+
+# Convierte las variables a factores
+datos_tarea$Bloque_Semana <- factor(datos_tarea$Bloque_Semana)
+datos_tarea$Variedad      <- factor(datos_tarea$Variedad)
+
+# Verificar estructura y resumen descriptivo
+str(datos_tarea)
+summary(datos_tarea)
+```
+
+### Etapa 2: Cálculo de Grados de Libertad
+
+```{r taller-etapa2}
+# Calcula manualmente los GL esperados antes de ajustar el modelo
+# k_tarea <- ___   # Número de variedades
+# r_tarea <- ___   # Número de bloques (semanas)
+# cat("GL Tratamientos =", k_tarea - 1, "\n")
+# cat("GL Bloques      =", r_tarea - 1, "\n")
+# cat("GL Error        =", (k_tarea-1)*(r_tarea-1), "\n")
+# cat("GL Total        =", k_tarea*r_tarea - 1, "\n")
+# cat("\nComparación con DCA:\n")
+# cat("  DCA GL_Error  =", k_tarea*r_tarea - k_tarea, "\n")
+# cat("  DBCA GL_Error =", (k_tarea-1)*(r_tarea-1), "\n")
+```
+
+### Etapa 3: Histograma y Boxplots Exploratorios
+
+```{r taller-etapa3}
+# Genera un histograma y dos boxplots:
+# 1. Rendimiento por Variedad
+# 2. Rendimiento por Bloque (semana)
+#
+# ggplot(datos_tarea, aes(x = Rendimiento_tha)) +
+#   geom_histogram(bins = 8, fill = "steelblue", color = "white") +
+#   labs(title = "Distribución del Rendimiento de Maíz") + theme_classic()
+#
+# ggplot(datos_tarea, aes(x = Variedad, y = Rendimiento_tha, fill = Variedad)) +
+#   geom_boxplot(alpha = 0.7) + geom_jitter(width = 0.2, size = 2.5) +
+#   theme_classic()
+```
+
+### Etapa 4: Ajuste del Modelo y Verificación de Supuestos
+
+```{r taller-etapa4}
+# modelo_tarea <- aov(___ ~ ___ + ___, data = datos_tarea)
+# residuos_tarea <- residuals(modelo_tarea)
+# shapiro.test(residuos_tarea)
+# leveneTest(Rendimiento_tha ~ Variedad, data = datos_tarea)
+```
+
+### Etapa 5: Tabla ANOVA e Interpretación
+
+```{r taller-etapa5}
+# summary(modelo_tarea)
+# ¿Los bloques son significativos?  ¿Las variedades difieren?
+# ¿Cuánto explica el bloqueo de la variación total?
+```
+
+### Etapa 6: Prueba de Tukey y Gráfico Final
+
+```{r taller-etapa6}
+# tukey_tarea <- HSD.test(modelo_tarea, "Variedad", group = TRUE)
+# print(tukey_tarea$groups)
+#
+# Genera un gráfico de barras O boxplot con letras de Tukey
+# Similar a los gráficos de la sección 10 del taller
+```
+
+## Preguntas de Reflexión
+
+::: {.callout-important}
+## Responde las siguientes preguntas
+
+**A.** ¿Los bloques (semanas de siembra) resultaron significativos en el ANOVA? ¿Fue útil el bloqueo? Argumente con el p-valor y el porcentaje de variación explicada por el bloque.
+
+**B.** ¿Cuántos GL tiene el error en este DBCA? Compare con los GL del error que tendría un DCA equivalente. ¿Qué implica esta diferencia para la potencia estadística del análisis?
+
+**C.** ¿Qué variedad de maíz recomienda para adopción en la región? Argumente con los grupos de Tukey y el contexto agronómico (rendimiento vs. disponibilidad de semilla).
+
+**D.** ¿Se cumplen los supuestos del modelo? Explique el resultado de cada prueba, el criterio de decisión y la consecuencia estadística de no cumplirlos.
+
+**E.** Observe el perfil de medias (Variedad × Bloque). ¿Las líneas son aproximadamente paralelas? ¿Qué indica esto sobre la asunción de aditividad del DBCA?
+:::
+
+---
+
+# Resumen de Conceptos Clave
+
+| Concepto | Descripción |
+|---|---|
+| **DBCA** | Diseño para experimentos con unidades heterogéneas |
+| **Bloque** | Grupo de UE homogéneas; fuente de variación conocida |
+| **Gradiente** | Variabilidad sistemática (fertilidad, pendiente, operador) |
+| **Aditividad** | Supuesto de no-interacción Tratamiento×Bloque |
+| **GL Error DBCA** | $(k-1)(r-1)$ — menor que DCA |
+| **Eficiencia relativa** | Ganancia de precisión del DBCA vs DCA |
+| **Tukey HSD** | Comparación por pares controlando error tipo I global |
+| **Letras de significancia** | Letras iguales = sin diferencia significativa |
+
+: Resumen de conceptos clave del Taller 3 {#tbl-resumen}
+
+---
+
+*Taller 3 — Diseño de Bloques Completamente al Azar (DBCA) — Aplicaciones Estadísticas en Agronomía*

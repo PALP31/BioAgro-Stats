@@ -1,0 +1,377 @@
+---
+title: "Taller 2: Diseño Completamente al Azar (DCA) y Comparaciones Múltiples"
+subtitle: "Curso: Diseño Experimental y Aplicaciones Estadísticas"
+author: "Docente del Curso"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: show
+engine: knitr
+---
+
+# **Taller 2: Diseño Completamente al Azar (DCA) y Comparaciones Múltiples**
+
+::: {.callout-tip}
+## 🚀 Compatibilidad con Google Colab y Ejecución en la Nube
+Este taller es 100% compatible con **Google Colab** y se puede ejecutar directamente en tu navegador sin necesidad de instalar nada localmente.
+
+Para abrir este taller en Google Colab:
+1. Haz clic en el siguiente botón para iniciar el cuaderno en la nube:  
+   [![Abrir en Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PALP31/BioAgro-Stats/blob/main/01_Exploracion_Supuestos/Taller2_DCA.ipynb)
+2. Una vez en Colab, asegúrate de que el entorno esté configurado con el **Kernel de R** (verás el logo de R en la esquina superior derecha).
+3. La primera celda de código configurará el entorno e instalará todas las librerías necesarias de forma silenciosa.
+:::
+
+---
+
+## 1. Fundamentos Teóricos del DCA
+
+### ¿Por qué y cuándo utilizar un DCA?
+El **Diseño Completamente al Azar (DCA)** es el diseño experimental más simple, flexible y de más amplia aplicación cuando las condiciones externas son ideales. Se fundamenta en la asignación aleatoria de los tratamientos a las unidades experimentales, sin ningún tipo de restricción de bloqueo.
+
+**¿Cuándo se utiliza?**
+* Cuando las **unidades experimentales son altamente homogéneas** (ej. macetas de la misma variedad en un invernadero climatizado, placas de Petri en una incubadora, animales de la misma camada, edad y peso, o lotes uniformes de suelo en laboratorio).
+* Cuando el número de tratamientos o réplicas es reducido, ya que maximiza los grados de libertad del error.
+
+### Comparación conceptual: DCA vs. DBCA (Bloques)
+* **DCA (Sin restricciones):** Asume que la única fuente sistemática de variación son los **Tratamientos**. Cualquier otra variabilidad se agrupa bajo el término del error aleatorio.  
+  $$\text{Modelo matemático del DCA:} \quad Y_{ij} = \mu + \tau_i + \varepsilon_{ij}$$
+  Donde $Y_{ij}$ es la observación en la unidad experimental $j$ del tratamiento $i$, $\mu$ es la media general, $\tau_i$ es el efecto del tratamiento $i$, y $\varepsilon_{ij}$ es el error experimental aleatorio, que debe cumplir con $\varepsilon_{ij} \sim N(0, \sigma^2)$ independientes.
+
+* **DBCA (Con restricción de aleatorización):** Si se detecta o sospecha la existencia de un gradiente de variabilidad no deseado pero predecible (por ejemplo, diferencias de luz, humedad o fertilidad en un terreno), la homogeneidad se rompe. Para controlarlo, agrupamos las unidades en **Bloques** homogéneos. La aleatorización se realiza *dentro* de cada bloque.  
+  $$\text{Modelo matemático del DBCA:} \\quad Y_{ij} = \\mu + \\tau_i + \\beta_j + \\varepsilon_{ij}$$
+  Donde $\beta_j$ es el efecto del bloque $j$. Al aislar la variación de los bloques, el error residual $\varepsilon_{ij}$ disminuye sustancialmente, aumentando la precisión y potencia de la prueba ANOVA.
+
+---
+
+## 2. Anatomía de la Tabla ANOVA para DCA
+
+El Análisis de Varianza (ANOVA) descompone la variabilidad total de los datos en dos fuentes principales: la variabilidad **Entre Tratamientos** (el efecto del factor estudiado) y la variabilidad **Dentro de Tratamientos** (el Error Residual o ruido aleatorio).
+
+| Fuente de Variación (SV) | Grados de Libertad (GL) | Suma de Cuadrados (SC) | Cuadrado Medio (CM) | $F$ Calculado ($F_{\\text{calc}}$) | Valor $p$ ($p\\text{-value}$) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Tratamientos (Entre)** | $k - 1$ | $SC_{\\text{Trat}}$ | $CM_{\\text{Trat}} = \\frac{SC_{\\text{Trat}}}{k-1}$ | $F = \\frac{CM_{\\text{Trat}}}{CM_{\\text{Error}}}$ | $P(F_{(k-1, N-k)} \\ge F)$ |
+| **Error (Dentro)** | $N - k$ | $SC_{\\text{Error}}$ | $CM_{\\text{Error}} = \\frac{SC_{\\text{Error}}}{N-k}$ | | |
+| **Total** | $N - 1$ | $SC_{\\text{Total}}$ | | | |
+
+### ¿Cómo interpretar cada columna? (Conceptos Clave):
+* **Grados de Libertad (GL):** Es el número de piezas de información independiente. Para tratamientos es $k-1$ (donde $k$ es el número de grupos). Para el error es $N-k$ (donde $N$ es el número total de unidades).
+* **Suma de Cuadrados (SC):** Representa la dispersión o variabilidad. La $SC_{\\text{Trat}}$ mide qué tan lejos están las medias de los tratamientos respecto a la media general. La $SC_{\\text{Error}}$ mide la desviación de cada punto individual respecto a la media de su propio grupo.
+* **Cuadrados Medios (CM):** Son varianzas estimadas. Se obtienen dividiendo las sumas de cuadrados entre sus respectivos grados de libertad.
+* **$F$ Calculado ($F_{\\text{calc}}$):** Es el cociente entre el $CM_{\\text{Trat}}$ y el $CM_{\\text{Error}}$. Si es cercano a 1, la variabilidad entre tratamientos es similar al ruido de fondo. Si es significativamente mayor que 1, indica que los tratamientos causan cambios reales.
+* **Valor $p$:** La probabilidad de que las diferencias observadas se deban puramente al azar. Si $p < 0.05$, rechazamos la hipótesis nula ($H_0$: $\\mu_1 = \\mu_2 = ... = \\mu_k$).
+
+---
+
+## 3. Teoría de Comparaciones Múltiples (Post-Hoc)
+
+El ANOVA es una prueba *ómnibus*: nos dice si hay alguna diferencia significativa en el modelo global, pero no especifica qué grupos específicos difieren entre sí. Si rechazamos $H_0$, debemos realizar pruebas post-hoc:
+
+1. **Tukey (HSD - Honest Significant Difference):**
+   * **Enfoque:** Conservador.
+   * **Rigor:** Controla estrictamente la tasa de error por familia (FWER), asegurando que la probabilidad de cometer al menos un Error Tipo I (falso positivo) en todo el conjunto de comparaciones simultáneas sea exactamente del $5\\%$. Excelente para comparaciones del tipo \"todos contra todos\".
+
+2. **LSD de Fisher (Least Significant Difference):**
+   * **Enfoque:** Liberal.
+   * **Rigor:** No controla el error acumulado por comparaciones múltiples. La probabilidad de cometer falsos positivos crece exponencialmente al aumentar el número de tratamientos. Solo debe emplearse si el ANOVA global resulta altamente significativo y el número de tratamientos es muy bajo (3 o 4).
+
+3. **Dunnett:**
+   * **Enfoque:** Altamente específico.
+   * **Rigor:** Compara todos los tratamientos activos **exclusivamente contra un tratamiento control o testigo**. Al reducir significativamente el número de comparaciones de $k(k-1)/2$ a solo $k-1$, ofrece un poder estadístico excelente para detectar diferencias frente a un testigo.
+
+4. **Duncan:**
+   * **Enfoque:** Rango Múltiple (Intermedio/Liberal).
+   * **Rigor:** Ajusta el nivel crítico según la distancia de rango entre las medias comparadas. Declara diferencias con mayor facilidad que Tukey, pero tiene un riesgo de falso positivo moderadamente alto.
+
+---
+
+## 4. Caso de Estudio Práctico: Conservación de Fresas
+
+```{r}
+# =============================================================================
+# 0. CONFIGURACIÓN DE ENTORNO Y CARGA SILENCIOSA DE PAQUETES
+# =============================================================================
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+preparar_entorno <- function(paquetes) {
+  for (p in paquetes) {
+    if (!require(p, character.only = TRUE)) {
+      install.packages(p, dependencies = TRUE, quiet = TRUE)
+      library(p, character.only = TRUE)
+    }
+  }
+}
+
+paquetes_requeridos <- c("ggplot2", "performance", "see", "agricolae", "DescTools", "car")
+suppressMessages(preparar_entorno(paquetes_requeridos))
+```
+
+**Contexto Agrícola/Alimentario:**
+Un grupo de investigadores agrícolas desea probar la eficacia de 3 recubrimientos biodegradables sobre la vida de anaquel (en días de conservación óptima) de fresas (*Fragaria ananassa*) cosechadas en condiciones uniformes.
+
+* **Tratamientos (Factor):** Tipo de Recubrimiento (Control, Almidón, Gelatina, Quitosano).
+* **Variable de Respuesta:** Días de conservación sin daño fúngico o ablandamiento térmico.
+* **Diseño:** DCA balanceado con $n=6$ réplicas por tratamiento ($N=24$ unidades experimentales).
+
+```{r}
+# =============================================================================
+# 2. CARGA Y ANÁLISIS DESCRIPTIVO DE DATOS
+# =============================================================================
+datos_fresas <- data.frame(
+  Tratamiento = factor(rep(c("Control", "Almidon", "Gelatina", "Quitosano"), each = 6)),
+  Dias = c(4.2, 5.1, 5.8, 4.5, 6.2, 4.2,   # Control
+           6.9, 7.6, 8.3, 7.0, 8.6, 7.2,   # Almidón
+           7.6, 8.9, 10.0, 8.2, 10.3, 9.0, # Gelatina
+           9.5, 11.2, 12.5, 10.1, 12.8, 11.1) # Quitosano
+)
+
+print(aggregate(Dias ~ Tratamiento, data = datos_fresas, 
+                function(x) c(Media = mean(x), DesvEst = sd(x))))
+```
+
+::: {.callout-warning}
+## ⚠️ La Trampa del Factor (The Factor Trap)
+En R, cuando analizamos variables categóricas (como nuestros tratamientos `Control`, `Almidón`, etc.), siempre debemos declararlas explícitamente como **factores** usando la función `factor()`.
+
+Si no lo haces (por ejemplo, si tus tratamientos se llaman `1`, `2`, `3` y los dejas cargados como números simples), R no entenderá que son categorías cualitativas independientes. En su lugar, el comando `aov()` los tratará como una variable continua e intentará hacer una regresión lineal (calculando un único grado de libertad), lo que producirá un **ANOVA completamente erróneo**. ¡Siempre verifica con `is.factor()`!
+:::
+
+### Visualización Exploratoria de Datos (Tres Niveles)
+
+```{r}
+# =============================================================================
+# 3. VISUALIZACIÓN EXPLORATORIA DE TRES NIVELES
+# =============================================================================
+
+# 3.1 Nivel Principiante: Boxplot nativo de R
+boxplot(Dias ~ Tratamiento, data = datos_fresas, 
+        main = 'Boxplot Principiante: Días por Tratamiento', 
+        xlab = 'Tratamiento', ylab = 'Días de Conservación',
+        col = 'lightblue', border = 'darkblue')
+
+# 3.2 Nivel Intermedio: ggplot2 Boxplot Simple
+ggplot(datos_fresas, aes(x = Tratamiento, y = Dias, fill = Tratamiento)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = 'Boxplot Intermedio: ggplot2 Simple', x = 'Tratamiento', y = 'Días') +
+  theme(legend.position = "none")
+
+# 3.3 Nivel Avanzado: ggplot2 Boxplot con Jitter Estilo Premium
+ggplot(datos_fresas, aes(x = Tratamiento, y = Dias, fill = Tratamiento)) +
+  geom_boxplot(alpha = 0.4, outlier.shape = NA, color = "#2c3e50") +
+  geom_jitter(width = 0.15, size = 3.5, aes(color = Tratamiento), alpha = 0.8) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Visualización Avanzada en DCA",
+    subtitle = "Días de conservación de fresas según recubrimiento",
+    x = "Película Biodegradable (Tratamiento)",
+    y = "Días de Conservación Óptima"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(face = "italic", hjust = 0.5),
+    legend.position = "none"
+  )
+```
+
+---
+
+## 5. Ajuste del ANOVA y Validación de Supuestos
+
+::: {.callout-note}
+## 🔍 ¿Qué son los Residuos? (Concepto Clave)
+Cuando ajustamos un modelo estadístico, cada observación real ($Y_{ij}$) se compone de una parte explicada por el tratamiento y una parte que no podemos explicar (el ruido aleatorio o error experimental). A este ruido lo llamamos **Residuo** ($\varepsilon_{ij}$):
+
+$$\text{Residuo} = \text{Valor Observado} - \text{Valor Predicho (Media de su Grupo)}$$
+
+Para que las conclusiones de nuestro ANOVA sean válidas, este ruido experimental debe distribuirse de forma normal e independiente, con varianza constante (homocedasticidad).
+:::
+
+```{r}
+# =============================================================================
+# 4. AJUSTE DE MODELO Y DIAGNÓSTICO DE SUPUESTOS COMPLETO
+# =============================================================================
+
+# Ajuste del modelo
+modelo_fresas <- aov(Dias ~ Tratamiento, data = datos_fresas)
+
+# Extracción formal de residuos
+residuos_fresas <- residuals(modelo_fresas)
+
+# 4.1 QQ-Plot de los Residuos
+qqnorm(residuos_fresas, main = "Gráfico QQ-Plot de los Residuos", col = "darkblue", pch = 19)
+qqline(residuos_fresas, col = "red", lwd = 2)
+
+# 4.2 Prueba de Normalidad de Shapiro-Wilk
+print(shapiro.test(residuos_fresas))
+
+# 4.3 Prueba de Homocedasticidad de Levene
+print(leveneTest(Dias ~ Tratamiento, data = datos_fresas))
+
+# 4.4 Diagnóstico integral con 'performance'
+check_model(modelo_fresas, check = c("normality", "homogeneity"))
+```
+
+### Interpretación del ANOVA
+
+```{r}
+# =============================================================================
+# 5. ANÁLISIS DE VARIANZA (ANOVA)
+# =============================================================================
+summary(modelo_fresas)
+```
+
+---
+
+## 6. Comparaciones Múltiples de Medias (Post-Hoc)
+
+```{r}
+# =============================================================================
+# 6. COMPARACIONES MÚLTIPLES DE MEDIAS
+# =============================================================================
+
+# 6.1 Prueba de Tukey HSD (Conservadora)
+print("--- PRUEBA DE TUKEY (HSD) ---")
+tukey_fresas <- HSD.test(modelo_fresas, "Tratamiento", group = TRUE)
+print(tukey_fresas$groups)
+
+# 6.2 Forma nativa de graficar
+plot(tukey_fresas, main = "Grupos de Comparación Rápida (agricolae)")
+
+# 6.3 Gráfico de Medias con EEM y Letras de Tukey
+df_tukey <- data.frame(
+  Tratamiento = rownames(tukey_fresas$means),
+  Media = tukey_fresas$means$Dias,
+  SD = tukey_fresas$means$std,
+  Rep = tukey_fresas$means$r
+)
+df_tukey$EEM <- df_tukey$SD / sqrt(df_tukey$Rep)
+df_tukey$Grupo <- tukey_fresas$groups[rownames(df_tukey), "groups"]
+
+ggplot(df_tukey, aes(x = Tratamiento, y = Media, fill = Tratamiento)) +
+  geom_bar(stat = "identity", color = "black", alpha = 0.7, width = 0.5) +
+  geom_errorbar(aes(ymin = Media - EEM, ymax = Media + EEM), width = 0.15, size = 0.8) +
+  geom_text(aes(label = Grupo, y = Media + EEM + 0.3), size = 6, fontface = "bold") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Comparación de Medias con Grupos de Tukey",
+    subtitle = "Letras distintas indican diferencias significativas (p < 0.05). Barras representan el EEM.",
+    x = "Tratamiento",
+    y = "Media de Días de Conservación"
+  ) +
+  theme(legend.position = "none")
+
+# 6.4 Otras pruebas comparativas
+print("--- PRUEBA DE DUNCAN ---")
+print(duncan.test(modelo_fresas, "Tratamiento", group = TRUE)$groups)
+
+print("--- PRUEBA LSD DE FISHER ---")
+print(LSD.test(modelo_fresas, "Tratamiento", group = TRUE)$groups)
+
+print("--- PRUEBA DE DUNNETT (VS. CONTROL) ---")
+print(DunnettTest(Dias ~ Tratamiento, data = datos_fresas, control = "Control"))
+```
+
+::: {.callout-tip}
+## 💡 Guía Pedagógica: ¿Cómo interpretar las letras de comparación?
+* **Regla de oro:** Si dos tratamientos **comparten al menos una letra**, la diferencia entre sus medias **NO** es estadísticamente significativa ($p \ge 0.05$).
+* **Si tienen letras totalmente diferentes:** La diferencia entre sus medias **SÍ** es estadísticamente significativa ($p < 0.05$).
+:::
+
+---
+
+# **TALLER EVALUATIVO**
+
+**Nombre del Estudiante:** ___________________________  
+**Fecha de Entrega:** ___________________________  
+
+---
+
+## EJERCICIO 1: Inoculantes en Pino (Sintaxis Guiada)
+
+**Contexto Forestal:**  
+Un vivero comercial evalúa el efecto de 3 inoculantes de micorrizas (`M1`, `M2`, `M3`) sobre la altura final (cm) de plántulas de *Pinus radiata* tras 6 meses en condiciones homogéneas de vivero, frente a plántulas Control (sin inoculación).
+
+### Datos del experimento:
+
+```{r}
+# --- DATOS DEL EXPERIMENTO FORESTAL (EJERCICIO 1) ---
+datos_pino <- data.frame(
+  Micorriza = factor(rep(c("Control", "M1", "M2", "M3"), each = 5)),
+  Altura = c(12.5, 11.8, 13.1, 12.2, 11.9,  # Control
+             15.2, 16.1, 14.8, 15.5, 15.9,  # M1
+             18.5, 19.2, 17.8, 18.1, 18.9,  # M2
+             14.1, 13.8, 14.5, 15.0, 14.2)  # M3
+)
+
+head(datos_pino)
+```
+
+### Instrucciones de completación (Ejercicio 1):
+Completa los espacios vacíos con `___` en la siguiente celda de código para ajustar el modelo, validar supuestos de forma cuantitativa, realizar el ANOVA y ejecutar Tukey.
+
+```{r}
+#| eval: false
+# 1. Ajustar el modelo lineal en DCA
+modelo_pino <- aov(___ ~ ___, data = datos_pino)
+
+# 2. Extraer residuos y probar Normalidad formalmente
+residuos_pino <- residuals(___)
+shapiro.test(___)
+
+# 3. Probar Homocedasticidad formalmente con la prueba de Levene
+leveneTest(___ ~ ___, data = datos_pino)
+
+# 4. Desplegar e interpretar la tabla ANOVA
+summary(___)
+
+# 5. Ejecutar la prueba de Tukey HSD para el modelo de pino
+tukey_pino <- HSD.test(___, "Micorriza", group = TRUE)
+print(tukey_pino$groups)
+```
+
+---
+
+## EJERCICIO 2: Toma de Decisiones en Raleo de Eucalipto
+
+**Contexto Forestal:**  
+Un silvicultor industrial está investigando el efecto de 3 intensidades de raleo (`Control` sin raleo, `Ligero`, `Fuerte`) sobre el Diámetro a la Altura del Pecho (DAP en cm) de *Eucalyptus globulus* después de 5 años.
+
+**Restricción comercial crítica:**  
+La empresa realizará una fuerte inversión basada en estos resultados. Si recomiendan raleos innecesarios o agresivos debido a un "falso positivo" (Error Tipo I), las pérdidas operativas serán millonarias. Por lo tanto, el departamento técnico exige el análisis estadístico más conservador y riguroso posible.
+
+**Hoja de ruta obligatoria para tu análisis (4 Pasos):**
+1. **Visualización:** Genera un gráfico adecuado (diagrama de cajas y puntos jitter con `ggplot2`) para explorar la distribución de los tratamientos.
+2. **Supuestos:** Valida formalmente la normalidad (Shapiro-Wilk) y homocedasticidad (Levene) de los residuos de forma cuantitativa.
+3. **ANOVA:** Ajusta y evalúa si existen diferencias significativas globales en el DAP.
+4. **Post-Hoc Adecuado:** Elige y justifica de manera conceptual la prueba de comparaciones múltiples más idónea considerando la restricción comercial de evitar falsos positivos (Error Tipo I).
+
+### Cargar datos:
+
+```{r}
+# =============================================================================
+# EJERCICIO 2: CARGA DE LOS DATOS DE EUCALIPTO
+# =============================================================================
+datos_eucalipto <- data.frame(
+  Raleo = factor(rep(c("Control", "Ligero", "Fuerte"), each = 6)),
+  DAP = c(15.2, 14.8, 15.6, 16.1, 14.9, 15.4,   # Control
+          18.5, 19.1, 17.9, 18.7, 19.5, 18.2,   # Ligero
+          22.1, 23.5, 21.8, 22.9, 24.0, 21.5)   # Fuerte
+)
+
+head(datos_eucalipto)
+```
+
+### Escribe tu análisis completo a continuación:
+
+```{r}
+#| eval: false
+# [Escribe aquí tu análisis completo paso a paso (Visualización, Supuestos, ANOVA y Post-Hoc adecuado)]
+
+```
