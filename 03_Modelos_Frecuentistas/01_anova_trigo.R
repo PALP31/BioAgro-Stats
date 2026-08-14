@@ -2,12 +2,14 @@
 # 01_anova_trigo.R (ESTRÉS SALINO X TÉRMICO)
 # ANOVA de 2 Vías con Bloques Completos al Azar (DBCA)
 # ============================================================================
+
 library(tidyverse)
 library(emmeans)
 library(performance)
 library(car)
 library(multcomp)
 library(multcompView)
+if (requireNamespace("easyModels", quietly = TRUE)) library(easyModels)
 
 set.seed(789)
 
@@ -25,7 +27,7 @@ datos_trigo <- expand.grid(
       sal == "Control" & heat == "Calor" ~ 25,
       sal == "Salino" & heat == "Calor" ~ 15  # Sinergia negativa de estreses
     ),
-    biom = yield_base + as.numeric(block)*0.5 + rnorm(n(), 0, 1.5)
+    biom = yield_base + as.numeric(block) * 0.5 + rnorm(n(), 0, 1.5)
   )
 
 # 2. AJUSTE DEL MODELO (ANOVA 2 VÍAS + BLOQUES)
@@ -42,19 +44,34 @@ print(check_model(mod_trigo))
 # 4. COMPARACIONES MÚLTIPLES (EMMEANS)
 cat("\n--- [3] COMPARACIONES PAIRWISE (INTERACCIÓN) ---\n")
 emm_inter <- emmeans(mod_trigo, ~ sal * heat)
-letras_inter <- cld(emm_inter, Letters = letters, adjust = "tukey")
+letras_inter <- as.data.frame(cld(emm_inter, Letters = letters, adjust = "tukey"))
+letras_inter$Grupo <- trimws(letras_inter$.group)
 print(letras_inter)
 
 # 5. GRÁFICO PROFESIONAL: GRUPOS POR INTERACCIÓN
-ggplot(datos_trigo, aes(x = heat, y = biom, fill = sal)) +
-  geom_boxplot(alpha = 0.7) +
-  geom_text(data = letras_inter, aes(y = emmean + (2.5*SE), label = .group), 
-            position = position_dodge(0.75), fontface = "bold") +
+p_anova <- ggplot(datos_trigo, aes(x = heat, y = biom, fill = sal)) +
+  geom_boxplot(alpha = 0.75, width = 0.6, position = position_dodge(0.75)) +
+  geom_text(
+    data = letras_inter,
+    aes(y = emmean + (2.5 * SE), label = Grupo),
+    position = position_dodge(0.75),
+    fontface = "bold",
+    size = 4
+  ) +
   scale_fill_manual(values = c("Control" = "#2E86AB", "Salino" = "#E74C3C")) +
-  labs(title = "Biomasa de Trigo bajo Estrés Combinado",
-       subtitle = "Interacción Salinidad x Calor (ANOVA 2 Vías + Bloques)",
-       x = "Condición Térmica", y = "Biomasa (g)", fill = "Salinidad") +
-  theme_minimal() +
-  theme(plot.title = element_text(face = "bold"))
+  labs(
+    title = "Biomasa de Trigo bajo Estrés Combinado",
+    subtitle = "Interacción Salinidad x Calor (ANOVA 2 Vías + Bloques)",
+    x = "Condición Térmica",
+    y = "Biomasa (g)",
+    fill = "Salinidad"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "top"
+  )
+
+print(p_anova)
 
 cat("\n--- Script 01 finalizado correctamente ---\n")
