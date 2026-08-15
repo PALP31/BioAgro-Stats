@@ -118,7 +118,7 @@ p_biplot <- ggplot() +
   geom_segment(
     data = loadings_df,
     aes(x = 0, y = 0, xend = PC1_scale, yend = PC2_scale),
-    arrow = arrow(length = unit(0.25, "cm")),
+    arrow = grid::arrow(length = grid::unit(0.25, "cm")),
     color = "#2C3E50",
     linewidth = 0.9
   ) +

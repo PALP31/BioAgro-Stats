@@ -109,7 +109,8 @@ paquetes <- c(
   "tidyverse", "lme4", "lmerTest", "emmeans", "car", "multcomp",
   "performance", "DHARMa", "agricolae", "drc", "mgcv", "gratia",
   "pheatmap", "corrplot", "patchwork", "tidymodels", "xgboost",
-  "brms", "tidybayes", "bayesplot", "vegan"
+  "brms", "tidybayes", "bayesplot", "vegan", "mixOmics", "vip",
+  "ranger", "kernlab", "bayestestR", "see", "ggsci", "viridis", "remotes"
 )
 
 paquetes_faltantes <- paquetes[!(paquetes %in% installed.packages()[, "Package"])]
@@ -119,7 +120,8 @@ if (length(paquetes_faltantes) > 0) {
 
 # Instalar easyModels desde GitHub
 if (!requireNamespace("easyModels", quietly = TRUE)) {
-  devtools::install_github("PALP31/easyModels")
+  if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes")
+  remotes::install_github("PALP31/easyModels")
 }
 ```
 
