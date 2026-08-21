@@ -1,0 +1,237 @@
+---
+title: "Reporte de Resultados Estadísticos"
+subtitle: "Subtítulo del análisis"
+author: "Autor"
+date: today
+date-format: "D MMMM YYYY"
+lang: es
+
+# --- Formato de salida -------------------------------------------------------
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenido"
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+    fig-align: center
+    fig-width: 7
+    fig-height: 5
+    embed-resources: true   # Archivo HTML autocontenido
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    fig-align: center
+    fig-width: 6
+    fig-height: 4
+    geometry:
+      - top=25mm
+      - bottom=25mm
+      - left=25mm
+      - right=25mm
+
+# --- Opciones de código ------------------------------------------------------
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: false   # Cambiar a true para reportes con modelos lentos
+
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figuras/"
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Paquetes base
+library(tidyverse)    # Manipulación y visualización
+library(knitr)        # Tablas
+library(kableExtra)   # Tablas con formato avanzado
+
+# Opciones globales de tablas
+options(knitr.kable.NA = "—")
+
+# Tema de ggplot
+theme_set(theme_bw(base_size = 12))
+```
+
+## Introducción {#sec-introduccion}
+
+Describa brevemente el contexto, la pregunta de investigación y los objetivos
+del análisis.
+
+-   **Pregunta de investigación:** ...
+-   **Objetivo principal:** ...
+-   **Variable respuesta:** ...
+-   **Predictores de interés:** ...
+
+---
+
+## Datos {#sec-datos}
+
+### Fuente y descripción
+
+Describa el origen de los datos, el diseño del estudio y las variables
+relevantes.
+
+```{r}
+#| label: carga-datos
+
+# Reemplazar por la ruta real o código de carga
+# datos <- read.csv("../datos/mi_archivo.csv")
+
+# Datos de ejemplo
+set.seed(123)
+datos <- data.frame(
+  y      = rnorm(60, mean = 10, sd = 2),
+  x1     = rnorm(60),
+  x2     = rnorm(60),
+  grupo  = factor(rep(c("A", "B", "C"), each = 20))
+)
+```
+
+### Resumen descriptivo
+
+```{r}
+#| label: estadisticos-descriptivos
+
+summary(datos) |>
+  knitr::kable(caption = "Resumen estadístico de los datos") |>
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"),
+                             full_width = FALSE)
+```
+
+### Visualización exploratoria
+
+```{r}
+#| label: fig-exploracion
+#| fig-cap: "Distribución de la variable respuesta por grupo."
+
+ggplot(datos, aes(x = grupo, y = y, fill = grupo)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 1.5) +
+  labs(x = "Grupo", y = "Respuesta (y)",
+       title = "Variable respuesta por grupo") +
+  theme(legend.position = "none")
+```
+
+---
+
+## Métodos {#sec-metodos}
+
+Describa los modelos estadísticos utilizados, los paquetes de R empleados y
+cualquier decisión metodológica relevante (selección de variables, tratamiento
+de datos faltantes, etc.).
+
+> **Nota:** Los análisis se realizaron en R versión `r R.version$major`.`r R.version$minor`.
+
+---
+
+## Resultados {#sec-resultados}
+
+### Modelo ajustado
+
+```{r}
+#| label: ajuste-modelo
+
+modelo <- lm(y ~ x1 + x2 + grupo, data = datos)
+```
+
+#### Tabla de coeficientes
+
+```{r}
+#| label: tbl-coeficientes
+#| tbl-cap: "Coeficientes del modelo lineal ajustado."
+
+coef_tabla <- broom::tidy(modelo, conf.int = TRUE) |>
+  dplyr::mutate(dplyr::across(where(is.numeric), \(x) round(x, 4)))
+
+knitr::kable(coef_tabla,
+             col.names = c("Término", "Estimado", "Error estándar",
+                           "Estadístico t", "p-valor", "IC 2.5%", "IC 97.5%")) |>
+  kableExtra::kable_styling(bootstrap_options = c("striped", "condensed"),
+                             full_width = FALSE)
+```
+
+#### Métricas globales del modelo
+
+```{r}
+#| label: tbl-metricas
+#| tbl-cap: "Métricas de ajuste del modelo."
+
+broom::glance(modelo) |>
+  dplyr::select(r.squared, adj.r.squared, sigma, statistic, p.value, AIC, BIC) |>
+  dplyr::mutate(dplyr::across(where(is.numeric), \(x) round(x, 4))) |>
+  knitr::kable(col.names = c("R²", "R² ajustado", "σ",
+                              "F", "p-valor", "AIC", "BIC")) |>
+  kableExtra::kable_styling(bootstrap_options = c("striped"),
+                             full_width = FALSE)
+```
+
+### Diagnóstico de supuestos
+
+```{r}
+#| label: fig-diagnostico
+#| fig-cap: "Gráficos de diagnóstico del modelo."
+#| fig-width: 9
+#| fig-height: 7
+
+par(mfrow = c(2, 2))
+plot(modelo)
+par(mfrow = c(1, 1))
+```
+
+```{r}
+#| label: prueba-normalidad
+
+# Prueba de Shapiro-Wilk sobre los residuos
+shapiro.test(residuals(modelo))
+```
+
+### Visualización de resultados
+
+```{r}
+#| label: fig-predichos
+#| fig-cap: "Valores observados frente a valores predichos por el modelo."
+
+datos$predichos <- fitted(modelo)
+
+ggplot(datos, aes(x = predichos, y = y, color = grupo)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "Valores predichos", y = "Valores observados",
+       color = "Grupo",
+       title = "Observados vs. Predichos") +
+  coord_equal()
+```
+
+---
+
+## Discusión {#sec-discusion}
+
+Interprete los resultados en el contexto de la pregunta de investigación.
+Discuta limitaciones, supuestos del modelo y posibles análisis adicionales.
+
+---
+
+## Conclusiones {#sec-conclusiones}
+
+Resuma los hallazgos principales en relación con los objetivos planteados.
+
+---
+
+## Información de sesión {#sec-sesion}
+
+```{r}
+#| label: session-info
+#| code-fold: true
+
+sessioninfo::session_info()
+```
