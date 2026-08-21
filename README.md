@@ -6,6 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00e5bc.svg)](LICENSE)
 [![R](https://img.shields.io/badge/R-%3E%3D%204.0-276DC3.svg)](https://www.r-project.org/)
+[![RStudio](https://img.shields.io/badge/RStudio-BioAgro--Stats.Rproj-75AADB.svg?logo=rstudio&logoColor=white)](BioAgro-Stats.Rproj)
 [![Ecosystem: easyModels](https://img.shields.io/badge/Ecosystem-easyModels_v0.4.0-0077b5.svg)](https://github.com/PALP31/easyModels)
 [![PUC Chile](https://img.shields.io/badge/PUC--Chile-Agronomía_%26_Biotecnología-4dadf7.svg)](https://www.uc.cl/)
 
@@ -97,6 +98,18 @@ modelo_rep <- analizar_medidas_repetidas(
 # Gráfico de líneas longitudinales
 graficar_predichos(modelo_rep, predictor = "Tiempo", por = "Tratamiento", tipo_grafico = "lineas")
 ```
+
+---
+
+## 🚀 Inicio Rápido con RStudio
+
+1. Clona el repositorio y abre directamente el archivo de proyecto [`BioAgro-Stats.Rproj`](BioAgro-Stats.Rproj):
+   ```bash
+   git clone https://github.com/PALP31/BioAgro-Stats.git
+   cd BioAgro-Stats
+   open BioAgro-Stats.Rproj
+   ```
+2. Al abrir el proyecto, el archivo [`.Rprofile`](.Rprofile) configurará automáticamente el entorno y mostrará el catálogo interactivo de módulos en tu consola de RStudio.
 
 ---
 
