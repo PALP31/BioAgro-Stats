@@ -1,4 +1,8 @@
 <div align="center">
+  <img src="assets/banner.svg" width="100%" alt="BioAgro-Stats Banner" />
+</div>
+
+<div align="center">
 
 # 🧬 BioAgro-Stats
 
